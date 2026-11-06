@@ -1,10 +1,23 @@
-# Кубок России U16 — LIVE gateway
+# Кубок России U16 — LIVE
 
-Cloudflare Worker source and deployment notes for the official FHR 2026/27 tournament.
+Публичная мобильная веб-страница и API для турнира ФХР «Кубок России» среди юношей 2011 г.р. (сезон 2026/2027).
 
-Official calendar: https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/
+- Сайт: https://kubok-u16-live.dimasik110111.workers.dev/
+- Официальный календарь: https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/
 
-**Status:** deployment and real-time match feed are not yet verified. A final score in the calendar is not proof that a match is live.
+## API
 
+| Endpoint | Что возвращает |
+| --- | --- |
+| `/health` | Проверка доступности Worker |
+| `/api/v1/matches` | Матчи из 8 групп и плей-офф, счёт из календаря ФХР, ссылки и арены |
+| `/api/v1/live` | Проверка карточек матчей текущего игрового дня и подтверждённые LIVE-матчи |
+| `/api/v1/matches/{gameId}` | Детальная карточка матча: команды, счёт, периоды и статус |
 
-Deployment workflow is configured. A push to `main` triggers Cloudflare deployment when repository secrets are present.
+Календарь обновляется из 10 AJAX-потоков ФХР. LIVE-статус не выводится только из наличия счёта: он подтверждается по тексту статуса в карточке матча. Если ФХР не отдаёт статус или карточку не удалось проверить, API не должен выдавать такой матч за LIVE.
+
+## Обновление и публикация
+
+Push в `main` запускает GitHub Actions и публикует Worker вместе со статической страницей через Cloudflare Workers Assets. Для публикации нужны GitHub Actions secrets `CLOUDFLARE_API_TOKEN` и `CLOUDFLARE_ACCOUNT_ID`.
+
+Данные, таймер и события матча доступны только в том объёме, в котором ФХР публикует их в HTML карточки. Протокол/видео не подменяются выдуманными данными.
