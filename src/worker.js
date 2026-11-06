@@ -156,6 +156,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       away,
       homeLogo,
       awayLogo,
+      rowImageTags: [...rowHtml.matchAll(/<(?:img|svg|source)\\b[^>]*>/gi)].map(m => m[0].slice(0, 320)),
       homeScore: scoreMatch ? Number(scoreMatch[1]) : null,
       awayScore: scoreMatch ? Number(scoreMatch[2]) : null,
       scoreNote: scoreMatch ? (scoreMatch[3] || "") : "",
