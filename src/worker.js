@@ -78,21 +78,22 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     );
     const matchNumber = numberIndex >= 0 ? Number(texts[numberIndex]) : null;
 
-    const isArena = (value) => /^(?:ЛА\b|МАУ\b|Арена\b|ледов|дворец)/i.test(value) ||
-      /(?:ледовая арена|ледовый дворец)/i.test(value);
+    const isArena = (value) =>
+      /^(?:ЛА|МАУ)(?:\s|$)/i.test(value) ||
+      /(?:арена|ледов|дворец|море спорта|побережье)/i.test(value);
     const isScore = (value) => /^\d{1,2}\s*:\s*\d{1,2}(?:\s+(?:ОТ|ПБ|ПП))?$/i.test(value);
-    const arenaIndex = texts.findIndex((value, index) =>
+    const arenaParts = texts.filter((value, index) =>
       index > dateIndex && index !== timeIndex && isArena(value)
     );
     const scoreIndex = texts.findIndex((value, index) =>
       index > dateIndex && index !== timeIndex && isScore(value)
     );
-    const arena = arenaIndex >= 0 ? texts[arenaIndex] : "";
+    const arena = arenaParts.join(" ");
     const scoreCell = scoreIndex >= 0 ? texts[scoreIndex] : "";
     const scoreMatch = scoreCell.match(/^(\d{1,2})\s*:\s*(\d{1,2})(?:\s+(ОТ|ПБ|ПП))?$/i);
 
     const teamCandidates = texts.filter((value, index) => {
-      if (!value || index === dateIndex || index === timeIndex || index === arenaIndex || index === scoreIndex) return false;
+      if (!value || index === dateIndex || index === timeIndex || index === scoreIndex || isArena(value)) return false;
       if (index === numberIndex || /^\d{1,8}$/.test(value)) return false;
       if (/^\d{1,2}:\d{2}$/.test(value) || /\d{2}\.\d{2}\.20\d{2}/.test(value)) return false;
       if (/^(?:ОТ|ПБ|ПП|МСК|:|—|-|№|дата|арена|команда|сч[её]т)$/i.test(value)) return false;
@@ -115,7 +116,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       } catch {}
     }
 
-    const isUnassignedPlayoff = /плей-офф/i.test(groupName) && Boolean(gameId) && !home && !away;
+    const isUnassignedPlayoff = /плей-офф/i.test(groupName) && Boolean(gameId) && (!home || !away);
     if ((!home || !away) && !isUnassignedPlayoff) continue;
     if (home && away && home === away) continue;
 
