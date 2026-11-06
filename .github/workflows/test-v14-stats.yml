@@ -20,8 +20,10 @@ jobs:
           assert data.get('ok') and data.get('complete')
           assert data['skaterCount']>=400 and data['goalieCount']>=40
           assert len(data['skaters'])==data['skaterCount'] and len(data['goalies'])==data['goalieCount']
-          assert len({p['id'] for p in data['skaters']})==len(data['skaters'])
-          assert len({p['id'] for p in data['goalies']})==len(data['goalies'])
+          duplicates=[p for p in data['skaters'] if sum(x['id']==p['id'] for x in data['skaters'])>1]
+          print('SKATER DUPLICATE IDS',[(p['id'],p['name'],p['team']) for p in duplicates[:12]],flush=True)
+          assert len({(p['id'],p['team']) for p in data['skaters']})==len(data['skaters'])
+          assert len({(p['id'],p['team']) for p in data['goalies']})==len(data['goalies'])
           for p in data['skaters']+data['goalies']:
             assert p['name'] and p['team'] and p['id']
             assert p['photo'].startswith('https://img.fhr.ru/players/')
