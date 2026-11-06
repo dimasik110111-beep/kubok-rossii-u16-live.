@@ -19,18 +19,10 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-      - name: Smoke test FHR feed
+      - name: Smoke test FHR API
         run: |
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/ | grep -q "Кубок России U16"
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/health | jq -e '.ok and .service == "kubok-u16-live"' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -e '.ok and .groupsFetched == 10 and (.matches | length) >= 85 and (.groupErrors | length) == 0' >/dev/null
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/source | jq '{ok, calendarStatus, calendarCount, calendarMinDate, calendarMaxDate, homeStatus, homeTitle, links, scripts}'
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq '{ok, fetchedAt, refreshHintSeconds, groupsFetched, groupErrors, liveVerified, matchesCount: (.matches | length), firstMatch: .matches[0], lastMatch: .matches[-1]}'
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26349466 | jq '{ok, gameId, matchNumber, home, away, homeScore, awayScore, periodScores, status, statusText, dateText, events, liveVerified}'
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq '{ok, gameId, matchNumber, home, away, homeScore, awayScore, periodScores, status, statusText, dateText, events, liveVerified}'
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq '{ok, fetchedAt, refreshHintSeconds, liveVerified, checkedCount, matches, checkedMatches, errors, notice}'
-          curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=25170375' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, scriptSrcs, hrefs, inlineScripts, markers, snippets}'
-          curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349776' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
-          curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349466' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
-          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/tournament | jq '{ok, httpStatus, finalUrl, htmlLength, title, textPreview, links, tabSnippets}'
-          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/calendar | jq '{ok, httpStatus, finalUrl, htmlLength, filters, links, textPreview, snippets}'
-          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/group-feeds | jq '{ok, filtersCount, feeds: [.feeds[] | {name, parsedCount, parseError, rowSamples, sampleHtml}]}'
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26349466 | jq -e '.ok and .status == "SCHEDULED"' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq -e '.ok and .status == "FINAL" and .homeScore == 3 and .awayScore == 0' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq -e '.ok and (.checkedCount >= 0)' >/dev/null
