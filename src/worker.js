@@ -188,6 +188,11 @@ export default {
         const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 5000);
         const markers = [...html.matchAll(/.{0,100}(?:live|period|score|game_id|gameId|match_id|matchId|ajax|api).{0,180}/gi)]
           .map(m => m[0].replace(/\s+/g, " ").slice(0, 280)).slice(0, 35);
+        const snippets = ["Окончен", "Не сыгран", "period-score", "score-wrap", "Матч центр", "Протокол", "гол:", "game-status", "match-status"]
+          .map(term => {
+            const i = html.toLowerCase().indexOf(term.toLowerCase());
+            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 900)).replace(/\\s+/g, " ").slice(0, 1400) };
+          }).filter(Boolean);
         return json({
           ok: response.ok,
           httpStatus: response.status,
@@ -199,7 +204,8 @@ export default {
           scriptSrcs,
           hrefs,
           inlineScripts,
-          markers
+          markers,
+          snippets
         }, 200, 0);
       } catch (error) {
         return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
