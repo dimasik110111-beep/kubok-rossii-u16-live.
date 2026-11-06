@@ -149,6 +149,76 @@ function parseCalendar(html, fetchedAt, groupName = "") {
   return matches;
 }
 
+
+function fhrElementText(html, cssClass) {
+  const cls=cssClass.replace(/[.*+?^$\{\}()|[\]\\]/g,"\\function parseMatchPage(html, gameId, fetchedAt) {");
+  const matcher=new RegExp('<(?:div|span|a)\\b[^>]*\\bclass=["\'][^"\']*\\b'+cls+'\\b[^"\']*["\'][^>]*>([\\s\\S]*?)<\\/(?:div|span|a)>','i');
+  return cellText((String(html||"").match(matcher)||[])[1] || "");
+}
+function fhrOfficialPortrait(chunk,category) {
+  const m=String(chunk||"").match(new RegExp('https:\\/\\/img\\.fhr\\.ru\\/'+category+'\\/[a-z0-9]+\\/[a-z0-9]+\\/\\d+\\.webp','i'));
+  return m ? m[0] : null;
+}
+function parseProtocolTimeline(html) {
+  const starts=[...html.matchAll(/<div\b[^>]*\bclass=["']match-protocol(?:\s+match-protocol--[a-z-]+)?["'][^>]*>/gi)];
+  const timeline=[];
+  const isEventType=(v)=>["GOAL","PENALTY","TIMEOUT","GOALKEEPER"].includes(v);
+  for(let index=0;index<starts.length && index<500;index++){
+    const m=starts[index];
+    const end=index+1<starts.length?starts[index+1].index:Math.min(html.length,m.index+11000);
+    const chunk=html.slice(m.index,Math.min(end,m.index+24000));
+    const leftIndex=chunk.search(/class=["'][^"']*\bmatch-protocol__left\b/);
+    const centerIndex=chunk.search(/class=["'][^"']*\bmatch-protocol__center\b/);
+    const rightIndex=chunk.search(/class=["'][^"']*\bmatch-protocol__right\b/);
+    if(centerIndex<0)continue;
+    const left=leftIndex>=0?chunk.slice(leftIndex,centerIndex):"";
+    const center=chunk.slice(centerIndex,rightIndex>=0?rightIndex:chunk.length);
+    const right=rightIndex>=0?chunk.slice(rightIndex):"";
+    const top=fhrElementText(center,"protocol-time__top");
+    const bottom=fhrElementText(center,"protocol-time__bottom");
+    const time=(bottom.match(/\b\d{1,3}:\d{2}\b/)||[])[0]||"";
+    const scoreMatch=top.match(/(\d+)\s*[-:]\s*(\d+)/);
+    const entryClass=m[0];
+    const type=/match-protocol--penalty/.test(entryClass)?"PENALTY":
+      /match-protocol--keepers/.test(entryClass)?"GOALKEEPER":
+      /match-protocol--timeout/.test(entryClass)?"TIMEOUT":
+      scoreMatch?"GOAL":"OTHER";
+    if(!isEventType(type))continue;
+    const extract=(part,side)=>{
+      if(!part||!/protocol-player-card/.test(part))return null;
+      const name=fhrElementText(part,"protocol-player-card__name");
+      const team=fhrElementText(part,"protocol-player-card__name-team");
+      const number=fhrElementText(part,"protocol-player-card__number");
+      const reason=fhrElementText(part,"protocol-player-card__label");
+      const duration=fhrElementText(part,"protocol-player-card__sidebar");
+      const photo=fhrOfficialPortrait(part,"players");
+      const teamLogo=fhrOfficialPortrait(part,"teams");
+      if(!name&&!team)return null;
+      return {side,name,team,number,reason,duration,photo,teamLogo};
+    };
+    const l=extract(left,"home"),r=extract(right,"away");
+    const primary=(l&&l.name?l:r)||l||r;
+    const seconds=time ? Number(time.split(":")[0])*60+Number(time.split(":")[1]):null;
+    timeline.push({
+      id:"event-"+index,
+      type,elapsed:time,elapsedSeconds:seconds,
+      period:seconds===null?null:seconds>3600?4:seconds>2400?3:seconds>1200?2:1,
+      label:top||type,
+      score:scoreMatch?scoreMatch[1]+":"+scoreMatch[2]:null,
+      player:primary?.name||null,
+      playerNumber:primary?.number||null,
+      team:primary?.team||null,
+      side:primary?.side||null,
+      playerPhoto:primary?.photo||null,
+      teamLogo:primary?.teamLogo||null,
+      description:primary?.reason||null,
+      penaltyMinutes:primary?.duration||null,
+      homePlayer:l,awayPlayer:r
+    });
+  }
+  return timeline;
+}
+
 function parseMatchPage(html, gameId, fetchedAt) {
   const matchNumberText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-number\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
   const statusText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-result\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
@@ -200,6 +270,8 @@ function parseMatchPage(html, gameId, fetchedAt) {
     statusText: statusLabel || null,
     dateText: cellText(dateText) || null,
     events: eventRows,
+    timeline: parseProtocolTimeline(html),
+    protocolSource: "FHR match center",
     matchUrl: "https://junior.fhr.ru/games/" + gameId + "/",
     source: "FHR",
     observedAt: fetchedAt,
