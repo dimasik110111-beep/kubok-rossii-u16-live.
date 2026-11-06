@@ -176,35 +176,97 @@ function parseMatchPage(html, gameId, fetchedAt) {
 }
 
 async function getCalendar() {
+  const cacheKey = new Request("https://cache.kubok-u16-live/api/v1/matches");
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return await cached.json();
+
   const fetchedAt = new Date().toISOString();
   const response = await fetch(FHR_CALENDAR, {
     headers: {
       "accept": "text/html,application/xhtml+xml",
       "user-agent": "KubokRossiiU16Live/1.0 (+FHR public calendar reader)"
     },
-    redirect: "follow",
-    cf: { cacheTtl: 5, cacheEverything: true }
+    redirect: "follow"
   });
 
-  if (!response.ok) throw new Error("FHR returned HTTP " + response.status);
-  const contentType = response.headers.get("content-type") || "";
-  if (contentType && !contentType.includes("text/html")) {
-    throw new Error("FHR returned an unexpected content type");
+  if (!response.ok) throw new Error("FHR calendar returned HTTP " + response.status);
+  const html = await response.text();
+  const filters = [...html.matchAll(/<div\b[^>]*data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi)]
+    .map(m => ({
+      url: new URL(decodeEntities(m[1]), FHR_CALENDAR).href,
+      name: cellText(m[2])
+    }))
+    .filter(x => x.name && /группа|плей-офф/i.test(x.name));
+
+  if (!filters.length) {
+    const fallbackMatches = parseCalendar(html, fetchedAt, "Основной календарь");
+    if (!fallbackMatches.length) throw new Error("No FHR group calendar filters or match rows found");
+    return {
+      ok: true,
+      tournament: "Кубок России U16",
+      season: "2026/2027",
+      sourceUrl: FHR_CALENDAR,
+      fetchedAt,
+      refreshHintSeconds: 15,
+      groupsFetched: 1,
+      matches: fallbackMatches,
+      liveVerified: false,
+      notice: "Календарь получен с ФХР. Для LIVE-статуса запрашивайте карточку матча отдельно."
+    };
   }
 
-  const html = await response.text();
-  const matches = parseCalendar(html, fetchedAt);
-  return {
+  const feedResults = await Promise.all(filters.map(async filter => {
+    try {
+      const feedResponse = await fetch(filter.url, {
+        headers: {
+          "accept": "text/html, */*",
+          "user-agent": "KubokRossiiU16Live/1.0 (+FHR public calendar reader)",
+          "x-requested-with": "XMLHttpRequest",
+          "referer": FHR_CALENDAR
+        },
+        redirect: "follow"
+      });
+      if (!feedResponse.ok) throw new Error("HTTP " + feedResponse.status);
+      const feedHtml = await feedResponse.text();
+      return { group: filter.name, matches: parseCalendar(feedHtml, fetchedAt, filter.name) };
+    } catch (error) {
+      return { group: filter.name, matches: [], error: String(error && error.message || error).slice(0, 160) };
+    }
+  }));
+
+  const matchesById = new Map();
+  for (const feed of feedResults) {
+    for (const match of feed.matches) {
+      const key = match.gameId ? String(match.gameId) : [match.date, match.timeMsk, match.home, match.away].join("|");
+      if (!matchesById.has(key)) matchesById.set(key, match);
+    }
+  }
+
+  const matches = [...matchesById.values()].sort((a, b) =>
+    (a.date + a.timeMsk).localeCompare(b.date + b.timeMsk)
+  );
+  if (!matches.length) throw new Error("FHR group feeds returned no match rows");
+
+  const payload = {
     ok: true,
     tournament: "Кубок России U16",
     season: "2026/2027",
     sourceUrl: FHR_CALENDAR,
     fetchedAt,
     refreshHintSeconds: 15,
-    liveVerified: matches.some(m => m.status === "LIVE"),
+    groupsFetched: feedResults.filter(x => !x.error).length,
+    groupErrors: feedResults.filter(x => x.error).map(x => ({ group: x.group, error: x.error })),
+    matchesCount: matches.length,
+    liveVerified: false,
     matches,
-    notice: "SCORE_AVAILABLE не означает LIVE. Статус LIVE выставляется только при явном маркере в ответе ФХР. Период, игровое время и события матча пока не подтверждены."
+    notice: "Список и результаты загружаются из календаря ФХР по всем группам и этапам. Для подтверждённого LIVE, периода и событий используйте /api/v1/matches/{gameId}."
   };
+
+  const cacheResponse = new Response(JSON.stringify(payload), {
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=12" }
+  });
+  await caches.default.put(cacheKey, cacheResponse);
+  return payload;
 }
 
 export default {
