@@ -457,7 +457,13 @@ async function getCalendar() {
       url: new URL(decodeEntities(m[1]), FHR_CALENDAR).href,
       name: cellText(m[2])
     }))
-    .filter(x => x.name && /группа|плей-офф/i.test(x.name));
+    .filter(x => {
+      if (!x.name || !/группа|плей-офф|стыков|золотой финал|серебряный финал/i.test(x.name)) return false;
+      try {
+        const u = new URL(x.url);
+        return u.protocol === "https:" && u.hostname === "junior.fhr.ru";
+      } catch { return false; }
+    });
 
   if (!filters.length) {
     const fallbackMatches = parseCalendar(html, fetchedAt, "Основной календарь");
@@ -515,13 +521,21 @@ async function getCalendar() {
     sourceUrl: FHR_CALENDAR,
     fetchedAt,
     refreshHintSeconds: 15,
+    groupsPublished: filters.length,
+    stagesPublished: {
+      first: filters.filter(x => /группа\s+.{1,4}-I$/i.test(x.name)).length,
+      second: filters.filter(x => /группа\s+.{1,4}-II$/i.test(x.name)).length,
+      third: filters.filter(x => /группа\s+.{1,4}-III$/i.test(x.name)).length,
+      crossovers: filters.filter(x => /стыков|плей-офф/i.test(x.name)).length,
+      finals: filters.filter(x => /золотой финал|серебряный финал/i.test(x.name)).length
+    },
     groupsFetched: feedResults.filter(x => !x.error).length,
     groups: feedResults.map(x => ({ name: x.group, matchesCount: x.matches.length, error: x.error || null })),
     groupErrors: feedResults.filter(x => x.error).map(x => ({ group: x.group, error: x.error })),
     matchesCount: matches.length,
     liveVerified: false,
     matches,
-    notice: "Список и результаты загружаются из календаря ФХР по всем группам и этапам. Для подтверждённого LIVE, периода и событий используйте /api/v1/matches/{gameId}."
+    notice: "Динамический каталог ФХР: все опубликованные группы, туры, стыковки и финалы; неопубликованные игры не создаются. Для LIVE используйте карточки матчей."
   };
 
   const cacheResponse = new Response(JSON.stringify(payload), {
