@@ -397,7 +397,7 @@ export default {
     if (request.method !== "GET") return json({ ok: false, error: "GET only" }, 405, 0);
 
     const url = new URL(request.url);
-    if (url.pathname === "/debug/team-assets") {
+    if (url.pathname === "/api/v1/debug/team-assets") {
       const urls = [
         "https://junior.fhr.ru/tournaments/kubokrossii-25008909/teams/",
         "https://junior.fhr.ru/tournaments/kubokrossii-25008909/krasnaya-mashina-yunior_7500809/"
