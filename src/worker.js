@@ -152,8 +152,11 @@ function parseMatchPage(html, gameId, fetchedAt) {
   const matchNumberText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-number\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
   const statusText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-result\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
   const dateText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-date\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
-  const teams = [...html.matchAll(/<span\b[^>]*class=["'][^"']*\bteam-title\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)]
+  const teamTitles = [...html.matchAll(/<span\b[^>]*class=["'][^"']*\bteam-title\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)]
     .map(m => cellText(m[1])).filter(Boolean);
+  const teamCities = [...html.matchAll(/<span\b[^>]*class=["'][^"']*\bteam-city\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)]
+    .map(m => cellText(m[1]));
+  const teams = teamTitles.map((name, index) => [name, teamCities[index] || ""].filter(Boolean).join(" "));
   const scoreIndex = html.indexOf('class="match-score"');
   const scoreChunk = scoreIndex >= 0 ? html.slice(scoreIndex, scoreIndex + 700) : "";
   const scoreNumbers = [...scoreChunk.matchAll(/class=["']text-score["']>(\d+)</gi)].map(m => Number(m[1])).slice(0, 2);
@@ -247,14 +250,16 @@ async function getLiveMatches() {
     sourceUrl: FHR_CALENDAR,
     fetchedAt: new Date().toISOString(),
     refreshHintSeconds: 10,
-    liveVerified: errors.length === 0,
+    liveVerified: candidates.length > 0 && errors.length === 0,
     checkedCount: results.length,
     errors,
     matches: liveMatches,
     checkedMatches: results,
     notice: errors.length
       ? "Часть карточек ФХР не удалось проверить; LIVE-статус не считается полностью подтверждённым."
-      : (liveMatches.length ? "LIVE-статус проверен по карточкам матчей ФХР." : "Карточки матчей ФХР проверены: сейчас подтверждённых LIVE-матчей нет.")
+      : (candidates.length === 0
+        ? "Сейчас нет матчей в окне проверки; LIVE не подтверждён, повторите запрос перед началом игры."
+        : (liveMatches.length ? "LIVE-статус проверен по карточкам матчей ФХР." : "Карточки матчей ФХР проверены: сейчас подтверждённых LIVE-матчей нет."))
   };
 }
 
