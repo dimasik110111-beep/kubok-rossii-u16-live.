@@ -1,0 +1,28 @@
+name: Inspect structured native protocol fields
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-native-fields.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 - <<'PY'
+          import json,urllib.request
+          u='https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/25170469'
+          req=urllib.request.Request(u,headers={'User-Agent':'JUNIOR-U16-Native-Protocol-QA'})
+          with urllib.request.urlopen(req,timeout=30) as r:data=json.load(r)
+          items=data.get('timeline',[])
+          for e in items:
+              print('EVENT',{'type':e.get('type'),'time':e.get('elapsed'),'score':e.get('score'),
+                'player':e.get('player'),'team':e.get('team'),'desc':e.get('description'),
+                'minutes':e.get('penaltyMinutes'),'side':e.get('side')},flush=True)
+          goals=[e for e in items if e.get('type')=='GOAL']
+          assert len(goals)==3,len(goals)
+          assert all(e.get('player') and e.get('score') and e.get('elapsed') for e in goals),'Incomplete goals'
+          penalties=[e for e in items if e.get('type')=='PENALTY']
+          assert all(e.get('player') and e.get('description') for e in penalties),'Incomplete penalties'
+          PY
