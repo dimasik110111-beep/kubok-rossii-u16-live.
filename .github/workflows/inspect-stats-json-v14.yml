@@ -1,0 +1,42 @@
+name: Inspect FHR player database JSON
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-stats-json-v14.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 -m pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,urllib.parse,json,re
+          from bs4 import BeautifulSoup
+          url='https://junior.fhr.ru/tournaments/kubokrossii-25008909/stats/'
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+          soup=BeautifulSoup(urllib.request.urlopen(req,timeout=30).read(),'html.parser')
+          target=(soup.select_one('a[data-ajax-link*="stats=BOMBARDIRS"]')['data-ajax-link'])
+          s=BeautifulSoup(urllib.request.urlopen(urllib.request.Request(urllib.parse.urljoin(url,target),headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read(),'html.parser')
+          path=s.select_one('.js-data-tables__filter[data-ajax]')['data-ajax']
+          print('AJAX',path,flush=True)
+          for mode in ['raw','datatables','post']:
+            u=urllib.parse.urljoin(url,path)
+            if mode=='datatables':
+              u+='&draw=1&start=0&length=50'
+            headers={'User-Agent':'Mozilla/5.0','X-Requested-With':'XMLHttpRequest','Referer':url}
+            data=None
+            if mode=='post':data=urllib.parse.urlencode({'draw':'1','start':'0','length':'50'}).encode()
+            try:
+              with urllib.request.urlopen(urllib.request.Request(u,data=data,headers=headers),timeout=30) as response:
+                h=response.read().decode('utf-8','ignore')
+                print('MODE',mode,'HTTP',response.status,'LEN',len(h),'TYPE',response.headers.get('content-type'),flush=True)
+                print('PREVIEW',re.sub(r'\s+',' ',h[:3800]),flush=True)
+                try:
+                  obj=json.loads(h)
+                  if isinstance(obj,dict):
+                    print('KEYS',list(obj),'COUNT',obj.get('recordsTotal'),obj.get('recordsFiltered'),'rows',len(obj.get('data',[])),flush=True)
+                    for v in obj.get('data',[])[:2]:print('ROW',str(v)[:4300],flush=True)
+                except Exception:pass
+            except Exception as e:print('ERR',repr(e),flush=True)
+          PY
