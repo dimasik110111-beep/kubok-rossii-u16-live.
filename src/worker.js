@@ -168,6 +168,38 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/v1/debug/group-feeds") {
+      try {
+        const response = await fetch(FHR_CALENDAR, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" } });
+        const html = await response.text();
+        const filters = [...html.matchAll(/<div\b[^>]*data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi)]
+          .map(m => ({ url: new URL(decodeEntities(m[1]), FHR_CALENDAR).href, name: cellText(m[2]) }))
+          .filter(x => x.name && /группа|плей-офф/i.test(x.name));
+        const feeds = await Promise.all(filters.map(async filter => {
+          try {
+            const r = await fetch(filter.url, {
+              headers: {
+                "accept": "text/html, */*",
+                "user-agent": "KubokRossiiU16Live/1.0",
+                "x-requested-with": "XMLHttpRequest",
+                "referer": FHR_CALENDAR
+              }
+            });
+            const body = await r.text();
+            let parsedCount = 0, parseError = null;
+            try { parsedCount = parseCalendar(body, new Date().toISOString()).length; }
+            catch (e) { parseError = String(e && e.message || e); }
+            return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900) };
+          } catch (e) {
+            return { name: filter.name, error: String(e && e.message || e) };
+          }
+        }));
+        return json({ ok: true, filtersCount: filters.length, feeds }, 200, 0);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/debug/calendar") {
       try {
         const calendarUrl = FHR_CALENDAR;
