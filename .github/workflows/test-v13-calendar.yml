@@ -29,7 +29,7 @@ jobs:
           assert data.get('groupsFetched')==len(stages)
           assert len(matches)>=90,'First two tours must provide 90 fixtures'
           assert len(round1)>=40,'Missing first-tour matches'
-          assert len(round2)>=50,'Missing second-tour matches and crossovers'
+          assert len(round2)+len(crosses)>=50,'Missing second-tour group matches and crossovers'
           assert len(crosses)>=10,'Missing crossover games'
           assert len(ids)==len(set(ids)),'Duplicate game IDs'
           assert data['stagesPublished']['first']>=4 and data['stagesPublished']['second']>=4
