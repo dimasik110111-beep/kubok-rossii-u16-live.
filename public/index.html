@@ -126,9 +126,11 @@
     state.live = data;
     state.lastLive = data.fetchedAt;
     $("liveCount").textContent = (data.matches || []).length;
-    const checkText = data.liveVerified
-      ? (data.checkedCount ? "Проверено карточек: "+data.checkedCount : "LIVE-проверка выполнена")
-      : "Есть ошибки проверки LIVE";
+    const checkText = data.errors?.length
+      ? "Есть ошибки проверки LIVE"
+      : (data.checkedCount
+        ? (data.liveVerified ? "Проверено карточек: "+data.checkedCount : "Проверка LIVE неполная")
+        : "Сейчас нет матчей в окне проверки — LIVE пока не подтверждён");
     $("notice").textContent = checkText + (data.notice ? " · " + data.notice : "");
     mergeLive();
     return data;
