@@ -1,0 +1,42 @@
+name: Inspect complete FHR tournament stats AJAX
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-stats-full-v14.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Discover all player stats sources
+        run: |
+          python3 -m pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,re
+          from bs4 import BeautifulSoup
+          base='https://junior.fhr.ru'
+          url=base+'/tournaments/kubokrossii-25008909/stats/'
+          html=urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read().decode('utf-8','ignore')
+          s=BeautifulSoup(html,'html.parser')
+          for card in s.select('.general-stat__card'):
+            title=card.select_one('.general-stat__title')
+            print('CARD',title.get_text(' ',strip=True) if title else '',flush=True)
+            print('PLAYERCOUNT',len(card.select('.general-stat__player')),flush=True)
+            print('FIRST',str(card.select_one('.general-stat__player'))[:2500].replace('\n',' ') if card.select_one('.general-stat__player') else '',flush=True)
+            print('SEEALL',[(a.get_text(' ',strip=True),a.get('href'),a.get('data-ajax-link')) for a in card.select('a[href]')][-4:],flush=True)
+          print('FILTERS',[(x.get_text(' ',strip=True)[:70],x.get('data-ajax-link')) for x in s.select('.filter-btn[data-ajax-link]')][:20],flush=True)
+          print('OTHER LINK COUNT',len(s.select('a[href*="stats="]')),flush=True)
+          link=s.select_one('a[href*="stats=BOMBARDIRS"]')
+          if link:
+            target=urllib.parse.urljoin(url,link['href'])
+            req=urllib.request.Request(target,headers={'User-Agent':'Mozilla/5.0','X-Requested-With':'XMLHttpRequest','Referer':url})
+            response=urllib.request.urlopen(req,timeout=30)
+            h=response.read().decode('utf-8','ignore')
+            t=BeautifulSoup(h,'html.parser')
+            print('ALL_URL',target[:550],flush=True)
+            print('ALL_HTTP',response.status,'BYTES',len(h),'TABLES',len(t.select('table')),'TR',len(t.select('tr')),'CARDS',len(t.select('.player')),flush=True)
+            for sel in ['.player','.general-stat__player','.stats-tbl','.stat-table','.stats-player','.table-item','.table-row','tr','[data-ajax-link]','.pagination','.statistic-row']:
+              e=t.select(sel)
+              print('ALL_SEL',sel,len(e),str(e[0])[:1800].replace('\n',' ') if e else '',flush=True)
+            print('ALL_START',re.sub(r'\s+',' ',h[:3600]),flush=True)
+          PY
