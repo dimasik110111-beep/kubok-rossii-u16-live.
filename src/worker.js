@@ -674,6 +674,146 @@ async function getRoster(teamId){
   return payload;
 }
 
+
+const STATS_SOURCE = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/stats/";
+const STATS_AJAX_BASE = "https://junior.fhr.ru/fhr-ajax/SXRwcm9maXRcQXBwXEFqYXhcQWpheFN0YXRz/Z2V0RGF0YVRhYmxlU2ltcGxlU3RhdHM=/";
+const STATS_YEAR_ID="25008950";
+const STATS_TOURNAMENT_ID="25008909";
+
+function statNumber(value){
+  const normalized=cellText(value).replace(/\u00a0/g,"").replace(/\s/g,"").replace(",",".");
+  if(normalized==="" || normalized==="—" || normalized==="-")return null;
+  const n=Number(normalized);
+  return Number.isFinite(n)?n:null;
+}
+function statText(html,classname){
+  const found=String(html||"").match(new RegExp('<(?:span|div)\\b[^>]*\\bclass=["\\'][^"\\']*\\b'+classname+'\\b[^"\\']*["\\'][^>]*>([\\s\\S]*?)<\\/(?:span|div)>','i'));
+  return cellText(found?.[1]||"");
+}
+function officialStatsProfile(html){
+  const match=String(html||"").match(/\bhref=["'](\/player\/[^"']+\/)["']/i);
+  if(!match)return null;
+  try{
+    const url=new URL(decodeEntities(match[1]),STATS_SOURCE);
+    return url.origin==="https://junior.fhr.ru"&&/^\/player\/[a-z0-9-]+\/$/.test(url.pathname)?url.href:null;
+  }catch{return null;}
+}
+function officialStatsImage(html,category){
+  const match=String(html||"").match(new RegExp('https:\\/\\/img\\.fhr\\.ru\\/'+category+'\\/[a-z0-9]+\\/[a-z0-9]+\\/\\d+\\.webp','i'));
+  return match?match[0]:null;
+}
+function parseFhrSkaterStats(record){
+  const player=String(record.surname||""),team=String(record.team_name||"");
+  const href=officialStatsProfile(player);
+  const name=statText(player,"player__name");
+  const teamName=statText(team,"team-title");
+  const teamCity=statText(team,"team-city");
+  if(!href||!name||!teamName)return null;
+  const id=Number((href.match(/-(\d+)\/$/)||[])[1]);
+  if(!Number.isFinite(id))return null;
+  return {
+    id,name,number:statText(player,"player__number"),
+    position:cellText((player.match(/<span\b[^>]*\bclass=["']player__role["'][^>]*>([\s\S]*?)<\/span>\s*<\/div>/i)||[])[1]||"")
+      .replace(/\s+/g," ").trim(),
+    photo:officialStatsImage(player,"players"),profile:href,
+    team:teamName,city:teamCity,teamLogo:officialStatsImage(team,"teams"),
+    gp:statNumber(record.gp),goals:statNumber(record.g),
+    assists:statNumber(record.a),points:statNumber(record.pts),
+    plusMinus:statNumber(record.plusminus),pim:statNumber(record.pim),
+    powerplayGoals:statNumber(record.ppg),shorthandedGoals:statNumber(record.shg),
+    shotsPerGame:null,pointsPerGame:statNumber(record.ptspg),
+    source:"FHR_STATS"
+  };
+}
+function parseFhrGoalieStats(record){
+  const player=String(record.surname||""),team=String(record.team_name||"");
+  const href=officialStatsProfile(player);
+  const name=statText(player,"player__name"),teamName=statText(team,"team-title");
+  if(!href||!name||!teamName)return null;
+  const id=Number((href.match(/-(\d+)\/$/)||[])[1]);
+  if(!Number.isFinite(id))return null;
+  return {
+    id,name,number:statText(player,"player__number"),position:"Вратарь",
+    photo:officialStatsImage(player,"players"),profile:href,
+    team:teamName,city:statText(team,"team-city"),teamLogo:officialStatsImage(team,"teams"),
+    gp:statNumber(record.gp),wins:statNumber(record.w),
+    losses:statNumber(record.l),timeOnIce:cellText(record.toi),
+    saves:statNumber(record.sv),shotsAgainst:statNumber(record.sa),
+    savePercentage:statNumber(record.sv_pct),gaa:statNumber(record.gaa),
+    goalsAgainst:statNumber(record.ga),shutouts:statNumber(record.so),
+    points:statNumber(record.t),pim:statNumber(record.pim),
+    source:"FHR_STATS"
+  };
+}
+
+function discoverStatsGroups(html){
+  const filters=[...html.matchAll(/<div\b[^>]*\bclass=["'][^"']*\bfilter-btn\b[^"']*["'][^>]*\bdata-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi)];
+  const map=new Map([["Общая статистика",""]]);
+  for(const [,path,labelRaw] of filters){
+    const label=cellText(labelRaw);
+    try{
+      const url=new URL(decodeEntities(path),STATS_SOURCE);
+      if(url.origin!=="https://junior.fhr.ru")continue;
+      const encoded=url.searchParams.get("params");
+      if(!encoded)continue;
+      const decoded=atob(encoded);
+      const id=(decoded.match(/GROUP_ID";s:\d+:"([^"]+)"/)||[])[1];
+      if(label&&id&&/^\d{6,10}$/.test(id))map.set(label,id);
+    }catch{}
+  }
+  return [...map.entries()].map(([name,id])=>({name,id}));
+}
+async function getStats(queryGroup){
+  const requested=String(queryGroup||"").trim().slice(0,95);
+  const key=new Request("https://cache.kubok-u16-live/api/v1/stats?group="+encodeURIComponent(requested));
+  const cached=await caches.default.match(key);
+  if(cached)return await cached.json();
+  const page=await fetch(STATS_SOURCE,{headers:{
+    "accept":"text/html","user-agent":"JuniorU16-FHRStats/1.0"
+  }});
+  if(!page.ok)throw new Error("FHR stats page HTTP "+page.status);
+  const pageHtml=await page.text();
+  const groups=discoverStatsGroups(pageHtml);
+  const selected=requested?groups.find(x=>x.name===requested):groups[0];
+  if(!selected)throw new Error("Unknown/unpublished FHR statistics group");
+  const groupId=selected.id;
+  async function getAll(key){
+    const url=new URL(STATS_AJAX_BASE);
+    for(const [k,value] of Object.entries({
+      key,comp:STATS_TOURNAMENT_ID,year:STATS_YEAR_ID,
+      group:groupId,season:"2026-2027",draw:"1",start:"0",length:"1500"
+    }))url.searchParams.set(k,value);
+    const response=await fetch(url.href,{headers:{
+      "accept":"application/json","x-requested-with":"XMLHttpRequest",
+      "referer":STATS_SOURCE,"user-agent":"JuniorU16-FHRStats/1.0"
+    }});
+    if(!response.ok)throw new Error("FHR stats "+key+" HTTP "+response.status);
+    const json=await response.json();
+    if(!json || !Array.isArray(json.data))throw new Error("Invalid FHR stats table "+key);
+    const expected=Number(json.recordsFiltered ?? json.recordsTotal);
+    if(!Number.isInteger(expected)||expected<0||json.data.length!==expected)
+      throw new Error("FHR "+key+" table incomplete: "+json.data.length+"/"+expected);
+    return json.data;
+  }
+  const [rawSkaters,rawGoalies]=await Promise.all([getAll("scorers"),getAll("goalkeeper")]);
+  const skaters=rawSkaters.map(parseFhrSkaterStats).filter(Boolean);
+  const goalies=rawGoalies.map(parseFhrGoalieStats).filter(Boolean);
+  if(skaters.length!==rawSkaters.length||goalies.length!==rawGoalies.length)
+    throw new Error("FHR player identity/photo table format changed");
+  const payload={
+    ok:true,source:"FHR",sourceUrl:STATS_SOURCE,
+    tournament:"Кубок России U16",season:"2026/2027",fetchedAt:new Date().toISOString(),
+    group:selected.name,availableGroups:groups.map(x=>x.name),
+    complete:true,skaterCount:skaters.length,goalieCount:goalies.length,
+    skaters,goalies,
+    note:"Full official FHR statistics tables. Goalie savePercentage is the source ratio 0–1, not 0–100."
+  };
+  await caches.default.put(key,new Response(JSON.stringify(payload),{
+    headers:{"content-type":"application/json","cache-control":"public,max-age=600"}
+  }));
+  return payload;
+}
+
 export default {
   async fetch(request) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -688,7 +828,7 @@ export default {
         endpoints: {
           matches: "/api/v1/matches",
           live: "/api/v1/live",
-          match: "/api/v1/matches/{gameId}", teams: "/api/v1/teams", roster:"/api/v1/teams/{teamId}"
+          match: "/api/v1/matches/{gameId}", teams: "/api/v1/teams", roster:"/api/v1/teams/{teamId}",stats:"/api/v1/stats?group={optional FHR group name}"
         },
         liveVerified: false,
         note: "Health check only. Match LIVE status is verified separately through FHR match-center pages."
@@ -703,6 +843,15 @@ export default {
     if(rosterRoute){
       try{return json(await getRoster(Number(rosterRoute[1])),200,90);}
       catch(error){return json({ok:false,error:"FHR roster failed",detail:String(error&&error.message||error).slice(0,200)},502,0);}
+    }
+
+    if (url.pathname === "/api/v1/stats") {
+      try {
+        return json(await getStats(url.searchParams.get("group")),200,60);
+      }catch(error){
+        return json({ok:false,error:"FHR full statistics unavailable",
+          detail:String(error?.message||error).slice(0,220)},502,0);
+      }
     }
 
     if (url.pathname === "/api/v1/live") {
