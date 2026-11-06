@@ -406,8 +406,8 @@ export default {
         try {
           const response = await fetch(pageUrl, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" });
           const html = await response.text();
-          const images = [...html.matchAll(/<(?:img|source|svg)\\b[^>]*>/gi)].slice(0, 30).map(m => m[0].slice(0, 360));
-          const teamLinks = [...html.matchAll(/<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi)]
+          const images = [...html.matchAll(/<(?:img|source|svg)\b[^>]*>/gi)].slice(0, 30).map(m => m[0].slice(0, 360));
+          const teamLinks = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
             .map(m => ({ href: m[1], text: cellText(m[2]) }))
             .filter(x => x.text && /команд|динамо|торпедо|авангард|локомотив|северсталь|академия|спартак|цска|нефтехимик|ска/i.test(x.text))
             .slice(0, 25);
