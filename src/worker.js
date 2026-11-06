@@ -317,11 +317,13 @@ export default {
             let parsedCount = 0, parseError = null;
             try { parsedCount = parseCalendar(body, new Date().toISOString(), filter.name).length; }
             catch (e) { parseError = String(e && e.message || e); }
-            const rowSamples = [...body.matchAll(/<tr\b[^>]*>([\s\\S]*?)<\/tr>/gi)]
+            const rowSamples = [...body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
               .filter(m => /СПАРТАК|ЛОКОМОТИВ|ТОРПЕДО/.test(cellText(m[1])))
               .slice(0, 2).map(m => getCellHtml(m[1]).map(cellText));
             const sampleIndex = body.indexOf("СПАРТАК");
-            const sampleHtml = /плей-офф/i.test(filter.name) && sampleIndex >= 0 ? body.slice(Math.max(0, sampleIndex - 700), sampleIndex + 1800) : "";
+            const rowStart = sampleIndex >= 0 ? body.lastIndexOf("<tr", sampleIndex) : -1;
+            const rowEnd = sampleIndex >= 0 ? body.indexOf("</tr>", sampleIndex) : -1;
+            const sampleHtml = /плей-офф/i.test(filter.name) && rowStart >= 0 && rowEnd >= 0 ? body.slice(rowStart, rowEnd + 5) : "";
             return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900), rowSamples, sampleHtml };
           } catch (e) {
             return { name: filter.name, error: String(e && e.message || e) };
