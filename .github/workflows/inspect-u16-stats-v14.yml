@@ -1,0 +1,37 @@
+name: Inspect official U16 tournament player statistics
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-u16-stats-v14.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect official statistic filters and full roster DOM
+        run: |
+          pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,re
+          from bs4 import BeautifulSoup
+          base='https://junior.fhr.ru/tournaments/kubokrossii-25008909/stats/'
+          req=urllib.request.Request(base,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html'})
+          html=urllib.request.urlopen(req,timeout=35).read().decode('utf-8','ignore')
+          soup=BeautifulSoup(html,'html.parser')
+          print('PAGE SIZE',len(html),'title',soup.title.get_text(' ',strip=True) if soup.title else '',flush=True)
+          for selector in ['table','.stat-table','.stats-table','.stats-table-wrap','.stats-page','.stats-block','.statistic-table','.table-stats',
+            '[data-ajax-link]','.tab-item','a[href*="stats"]','a[href*="player"]','.player-stat-card','.player-card',
+            '.players-table','.stat-tabs','.statistics-table','.statistic-card','.stats-list']:
+            els=soup.select(selector)
+            print('SELECTOR',selector,len(els),flush=True)
+            for e in els[:2]:print(' SAMPLE',str(e)[:1300].replace('\n',' '),flush=True)
+          for text in ['Весь список','Бомбардиры','Снайперы','Ассистенты','Вратари','Группа A-I',
+            'Бомбардир','stats-table','data-ajax-link','data-url','stats-sort','Игроки']:
+            i=html.find(text)
+            if i>=0:print('NEAR',text,re.sub(r'\s+',' ',html[max(0,i-250):i+900])[:1300],flush=True)
+          for element in soup.select('a[href]'):
+            href=element.get('href','')
+            if any(s in href for s in ['stat','player']):
+              print('LINK',element.get_text(' ',strip=True)[:50],href,flush=True)
+              if len(element.get_text(' ',strip=True))>100:break
+          PY
