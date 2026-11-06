@@ -1,0 +1,38 @@
+name: Verify v13 FHR dynamic tournament calendar
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/test-v13-calendar.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit all FHR-published rounds and crossovers
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request
+          url='https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches'
+          with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'JUNIOR-U16-v13-calendar-check','Cache-Control':'no-cache'}),timeout=45) as r:data=json.load(r)
+          assert data.get('ok')==True
+          stages=data.get('groups',[])
+          matches=data.get('matches',[])
+          names=[g['name'] for g in stages]
+          round1=[m for m in matches if m.get('group','').endswith('-I')]
+          round2=[m for m in matches if m.get('group','').endswith('-II')]
+          crosses=[m for m in matches if 'Плей-офф' in (m.get('group') or '') or 'Стыков' in (m.get('group') or '')]
+          ids=[m.get('gameId') for m in matches if m.get('gameId')]
+          print(json.dumps({'ok':data['ok'],'groupsFetched':data.get('groupsFetched'),
+            'groupsPublished':data.get('groupsPublished'),'stagesPublished':data.get('stagesPublished'),
+            'matchCount':len(matches),'round1':len(round1),'round2WithCrossovers':len(round2),
+            'crossovers':len(crosses),'stageNames':names,'errors':data.get('groupErrors')},ensure_ascii=False),flush=True)
+          assert data.get('groupsFetched')==len(stages)
+          assert len(matches)>=90,'First two tours must provide 90 fixtures'
+          assert len(round1)>=40,'Missing first-tour matches'
+          assert len(round2)>=50,'Missing second-tour matches and crossovers'
+          assert len(crosses)>=10,'Missing crossover games'
+          assert len(ids)==len(set(ids)),'Duplicate game IDs'
+          assert data['stagesPublished']['first']>=4 and data['stagesPublished']['second']>=4
+          assert data['stagesPublished']['crossovers']>=2
+          assert not data.get('groupErrors'),'FHR published stage errors'
+          PY
