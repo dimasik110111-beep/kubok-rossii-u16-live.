@@ -26,3 +26,4 @@ jobs:
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=25170375' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, scriptSrcs, hrefs, inlineScripts, markers, snippets}'
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349776' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349466' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
+          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/tournament | jq '{ok, httpStatus, finalUrl, htmlLength, title, textPreview, links}'
