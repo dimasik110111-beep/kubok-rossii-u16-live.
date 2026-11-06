@@ -687,7 +687,9 @@ function statNumber(value){
   return Number.isFinite(n)?n:null;
 }
 function statText(html,classname){
-  const found=String(html||"").match(new RegExp('<(?:span|div)\\b[^>]*\\bclass=["\\'][^"\\']*\\b'+classname+'\\b[^"\\']*["\\'][^>]*>([\\s\\S]*?)<\\/(?:span|div)>','i'));
+  if(!/^[a-zA-Z0-9_-]{1,60}$/.test(classname))return "";
+  const regex=new RegExp("<(?:span|div)\\b[^>]*\\bclass=[\\\"'][^\\\"']*\\b"+classname+"\\b[^\\\"']*[\\\"'][^>]*>([\\s\\S]*?)<\\/(?:span|div)>","i");
+  const found=String(html||"").match(regex);
   return cellText(found?.[1]||"");
 }
 function officialStatsProfile(html){
