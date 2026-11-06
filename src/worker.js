@@ -168,6 +168,31 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/v1/debug/calendar") {
+      try {
+        const calendarUrl = FHR_CALENDAR;
+        const response = await fetch(calendarUrl, {
+          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
+          redirect: "follow"
+        });
+        const html = await response.text();
+        const links = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 120) }))
+          .filter(x => /games\/|calendar|kubokrossii/i.test(x.href) || /группа|этап|2011 г\.р\./i.test(x.text)).slice(0, 150);
+        const filters = [...html.matchAll(/<[^>]+data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/[^>]+>/gi)]
+          .map(m => ({ url: m[1], text: cellText(m[2]).slice(0, 80) })).slice(0, 40);
+        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 12000);
+        const snippets = ["Календарь", "Группа A-I", "Группа Б-I", "Группа В-I", "Группа Г-I", "data-ajax-link"]
+          .map(term => {
+            const i = html.toLowerCase().indexOf(term.toLowerCase());
+            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 1800)).replace(/\s+/g, " ").slice(0, 2200) };
+          }).filter(Boolean);
+        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, filters, links, textPreview, snippets }, 200, 0);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/debug/tournament") {
       try {
         const tournamentUrl = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/";
