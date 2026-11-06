@@ -397,6 +397,26 @@ export default {
     if (request.method !== "GET") return json({ ok: false, error: "GET only" }, 405, 0);
 
     const url = new URL(request.url);
+    if (url.pathname === "/debug/team-assets") {
+      const urls = [
+        "https://junior.fhr.ru/tournaments/kubokrossii-25008909/teams/",
+        "https://junior.fhr.ru/tournaments/kubokrossii-25008909/krasnaya-mashina-yunior_7500809/"
+      ];
+      const pages = await Promise.all(urls.map(async pageUrl => {
+        try {
+          const response = await fetch(pageUrl, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" });
+          const html = await response.text();
+          const images = [...html.matchAll(/<(?:img|source|svg)\\b[^>]*>/gi)].slice(0, 30).map(m => m[0].slice(0, 360));
+          const teamLinks = [...html.matchAll(/<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi)]
+            .map(m => ({ href: m[1], text: cellText(m[2]) }))
+            .filter(x => x.text && /команд|динамо|торпедо|авангард|локомотив|северсталь|академия|спартак|цска|нефтехимик|ска/i.test(x.text))
+            .slice(0, 25);
+          return { url: pageUrl, status: response.status, length: html.length, images, teamLinks };
+        } catch (error) { return { url: pageUrl, error: String(error) }; }
+      }));
+      return json({ ok: true, pages }, 200, 0);
+    }
+
     if (url.pathname === "/health") {
       return json({
         ok: true,
