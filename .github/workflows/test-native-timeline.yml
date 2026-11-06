@@ -1,0 +1,19 @@
+name: Validate FHR native timeline
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/test-native-timeline.yml']
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/25170469 -o result.json
+          jq -c '{ok, status, homeScore, awayScore, periods: (.periodScores|length), timeline: (.timeline|length), eventKinds: [.timeline[].type], sample: [.timeline[]|select(.type=="GOAL")][0]}' result.json
+          jq -e '.ok and .status=="FINAL" and (.periodScores|length)>=3 and
+            ([.timeline[]|select(.type=="GOAL")]|length)==3 and
+            ([.timeline[]|select(.type=="PENALTY")]|length)>=5 and
+            ([.timeline[]|select(.type=="GOALKEEPER")]|length)>=1 and
+            ([.timeline[]|select(.type=="GOAL")][0].player|length)>3' result.json
