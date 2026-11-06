@@ -1,0 +1,4 @@
+name = "kubok-u16-live"
+main = "src/worker.js"
+compatibility_date = "2026-11-06"
+workers_dev = true
