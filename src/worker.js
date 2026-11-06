@@ -116,7 +116,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       } catch {}
     }
 
-    const isUnassignedPlayoff = /плей-офф/i.test(groupName) && Boolean(gameId) && (!home || !away);
+    const isUnassignedPlayoff = /плей-офф/i.test(groupName) && Boolean(matchNumber) && (!home || !away);
     if ((!home || !away) && !isUnassignedPlayoff) continue;
     if (home && away && home === away) continue;
 
