@@ -151,9 +151,23 @@ function parseCalendar(html, fetchedAt, groupName = "") {
 
 
 function fhrElementText(html, cssClass) {
-  const cls=cssClass.replace(/[.*+?^$\{\}()|[\]\\]/g,"\\function parseMatchPage(html, gameId, fetchedAt) {");
-  const matcher=new RegExp('<(?:div|span|a)\\b[^>]*\\bclass=["\'][^"\']*\\b'+cls+'\\b[^"\']*["\'][^>]*>([\\s\\S]*?)<\\/(?:div|span|a)>','i');
-  return cellText((String(html||"").match(matcher)||[])[1] || "");
+  if (!/^[a-z0-9_-]{2,80}$/i.test(cssClass)) return "";
+  const source=String(html||"");
+  const expression=new RegExp("<(div|span|a)\\b[^>]*\\bclass=[\"'][^\"']*\\b"+cssClass+"\\b[^\"']*[\"'][^>]*>", "i");
+  const open=expression.exec(source);
+  if (!open) return "";
+  const tag=open[1].toLowerCase();
+  const start=open.index+open[0].length;
+  const tokens=new RegExp("<\\/?" + tag + "\\b[^>]*>", "gi");
+  tokens.lastIndex=start;
+  let depth=1, token;
+  while ((token=tokens.exec(source))!==null) {
+    if (token[0].startsWith("</")) depth--;
+    else if (!token[0].endsWith("/>")) depth++;
+    if (depth===0) return cellText(source.slice(start,token.index));
+    if (token.index-start>12000) break;
+  }
+  return "";
 }
 function fhrOfficialPortrait(chunk,category) {
   const m=String(chunk||"").match(new RegExp('https:\\/\\/img\\.fhr\\.ru\\/'+category+'\\/[a-z0-9]+\\/[a-z0-9]+\\/\\d+\\.webp','i'));
