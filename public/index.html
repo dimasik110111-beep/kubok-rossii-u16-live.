@@ -1,147 +1,210 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#10151d">
-<meta name="description" content="Кубок России U16 — результаты, расписание и LIVE матчей 2011 года рождения.">
-<title>Кубок России U16 — хоккей LIVE</title>
-<style>
-:root{color-scheme:dark;--bg:#0c1118;--surface:#151d27;--line:#2a3948;--text:#f4f7fa;--muted:#9aa9b8;--muted2:#718294;--blue:#42a5f5;--green:#20c77a;--red:#ff5964;--amber:#f5b942;--radius:14px;--shadow:0 12px 32px #0003}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer}a{color:inherit}
-.appbar{background:#121a24;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}.appbar-inner{width:min(1180px,100%);margin:auto;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:44px;height:44px;border-radius:12px;background:linear-gradient(145deg,#2085d7,#124b83);display:grid;place-items:center;box-shadow:inset 0 1px #ffffff33,0 5px 16px #007bce33;flex:none}.brand-mark b{font-size:16px;letter-spacing:-.06em}.brand-mark small{font-size:7px;letter-spacing:.12em;margin-top:-10px;opacity:.8}.brand-copy{min-width:0}.brand-copy strong{display:block;font-size:15px;letter-spacing:.01em;white-space:nowrap}.brand-copy span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
-.connection{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 4px #f5b94218}.dot.ok{background:var(--green);box-shadow:0 0 0 4px #20c77a18}.dot.bad{background:var(--red);box-shadow:0 0 0 4px #ff596418}
-.page{width:min(1180px,100%);margin:auto;padding:22px 22px 70px}.hero{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px 24px;border:1px solid #29435a;border-radius:18px;background:radial-gradient(ellipse at 88% 0%,#1c609033,transparent 45%),linear-gradient(115deg,#172a3c,#131d29 68%);box-shadow:var(--shadow)}
-.eyebrow{font-size:10px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:#78baff}.hero h1{font-size:clamp(24px,4vw,34px);line-height:1.1;letter-spacing:-.045em;margin:7px 0 6px}.hero h1 span{color:#78baff}.hero p{margin:0;color:#aebdcb;font-size:13px}.hero-count{text-align:right;flex:none;padding-left:18px;border-left:1px solid #ffffff1a}.hero-count strong{display:block;font-size:29px;line-height:1;font-variant-numeric:tabular-nums}.hero-count span{display:block;color:var(--muted);font-size:10px;margin-top:7px}
-.nav{display:flex;gap:5px;margin:18px 0 16px;padding:5px;background:#111923;border:1px solid var(--line);border-radius:12px;width:max-content;max-width:100%}.nav button{border:0;background:transparent;color:var(--muted);padding:10px 19px;border-radius:8px;font-size:13px;font-weight:700;white-space:nowrap}.nav button.active{background:#243e57;color:#fff;box-shadow:inset 0 0 0 1px #3d668b}
-.layout{display:grid;grid-template-columns:minmax(0,1fr) 285px;gap:18px;align-items:start}.main{min-width:0}.toolbar{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px;margin-bottom:14px}.filter-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.filter-row+.filter-row{margin-top:11px;padding-top:11px;border-top:1px solid var(--line)}
-.filter-chip{border:1px solid transparent;background:#202b37;color:var(--muted);padding:8px 12px;border-radius:8px;font-size:12px;font-weight:700}.filter-chip.active{background:#173b5b;border-color:#2a6c9f;color:#eaf6ff}.filter-chip.live.active{background:#153c30;border-color:#1b8057;color:#75f0b3}
-.control{min-width:0;border:1px solid var(--line);background:#101821;color:var(--text);border-radius:9px;padding:9px 11px;font-size:12px;outline:none}.control:focus{border-color:#438ac1;box-shadow:0 0 0 3px #258bd022}.control.select{max-width:210px}.control.search{flex:1;min-width:145px}
-.section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:20px 2px 10px}.section-heading h2{margin:0;font-size:14px;letter-spacing:.01em}.section-heading span{color:var(--muted2);font-size:11px}
-.date-heading{display:flex;align-items:center;gap:10px;color:#c7d4df;font-size:12px;font-weight:800;text-transform:capitalize;margin:20px 2px 9px}.date-heading:after{content:"";height:1px;flex:1;background:var(--line)}
-.league-heading{display:flex;align-items:center;gap:9px;padding:9px 12px;background:#192633;border:1px solid #293c4c;border-bottom:0;border-radius:11px 11px 0 0;color:#dce7f0;font-size:11px;font-weight:800;letter-spacing:.03em}.league-heading .league-dot{width:6px;height:6px;border-radius:2px;background:var(--blue)}.league-heading small{margin-left:auto;color:var(--muted);font-weight:500;font-size:10px}
-.match-card{display:block;text-decoration:none;color:inherit;background:#151e28;border:1px solid var(--line);border-top:0;padding:12px 14px 10px;transition:background .15s,border-color .15s}.match-card:last-child{border-radius:0 0 11px 11px;margin-bottom:13px}.match-card:hover{background:#1b2936;border-color:#3d6686}
-.match-head{display:flex;align-items:center;gap:9px;min-height:20px;margin-bottom:8px}.match-time{font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;color:#dbe7f2}.match-number{font-size:10px;color:var(--muted2)}
-.status{margin-left:auto;display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:5px;background:#263341;color:#b9c7d4;font-size:9px;font-weight:900;letter-spacing:.06em}.status.live{background:#153e30;color:#67e6a7}.status.live:before{content:"";width:6px;height:6px;border-radius:50%;background:#36e18e;box-shadow:0 0 0 3px #36e18e22;animation:pulse 1.5s infinite}.status.pause{background:#473719;color:#f5ce73}.status.final{background:#1b3550;color:#9bcaff}.status.result{background:#302746;color:#d2b8ff}@keyframes pulse{50%{opacity:.45}}
-.match-body{display:block}.teams{min-width:0}.team-row{display:flex;align-items:center;gap:10px;min-width:0;min-height:35px}.team-row+.team-row{margin-top:3px}.crest{width:31px;height:31px;flex:none;display:grid;place-items:center;border-radius:50%;background:#f4f7fa;border:1px solid #d5dce3;overflow:hidden;position:relative}.crest img{width:100%;height:100%;object-fit:contain;padding:2px;display:block}.crest-fallback{display:none;position:absolute;inset:0;place-items:center;background:linear-gradient(145deg,#344d64,#1c2b3a);color:#eaf5ff;font-size:10px;font-weight:900;letter-spacing:-.03em}.team-name{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.team-score{margin-left:auto;min-width:25px;text-align:right;font-size:19px;line-height:1;font-weight:850;font-variant-numeric:tabular-nums;letter-spacing:-.04em}.team-score.winner{color:#fff}
-.match-footer{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:9px 0 0 41px;color:var(--muted2);font-size:10px}.match-footer span{display:inline-flex;align-items:center;gap:5px}.match-footer .live-detail{color:#8ee7b8}.periods{color:#c0cddd}.events{margin:8px 0 0 41px;padding:7px 9px;border-left:2px solid #38536b;background:#111923;border-radius:0 7px 7px 0;color:#aebdca;font-size:10px}
-.empty,.error{padding:34px 18px;text-align:center;background:var(--surface);border:1px dashed var(--line);border-radius:12px;color:var(--muted);font-size:13px}.error{color:#ff9ca4;border-color:#713d48}
-.side-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:13px}.side-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}.side-title strong{font-size:12px}.side-title span{font-size:9px;color:var(--muted2);text-transform:uppercase;letter-spacing:.08em}.live-empty{padding:18px 8px;text-align:center;color:var(--muted);font-size:11px;background:#101821;border-radius:9px}.mini-match{display:block;padding:10px 0;border-top:1px solid var(--line);text-decoration:none}.mini-match:first-of-type{border-top:0;padding-top:0}.mini-head{display:flex;align-items:center;justify-content:space-between;color:var(--muted);font-size:9px;margin-bottom:7px}.mini-team{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:650}.mini-team+.mini-team{margin-top:5px}.mini-team .crest{width:22px;height:22px}.mini-team .crest-fallback{font-size:8px}.mini-team b{margin-left:auto;font-size:13px;font-variant-numeric:tabular-nums}.source-note{color:var(--muted);font-size:10px;line-height:1.55}.source-note a{color:#8bc5ff;text-decoration:none}
-.table-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:15px}.table-title{padding:12px 14px;border-bottom:1px solid var(--line);font-size:12px;font-weight:800}table{width:100%;border-collapse:collapse;min-width:430px}th,td{padding:10px 11px;border-bottom:1px solid var(--line);font-size:11px;text-align:right;font-variant-numeric:tabular-nums}th{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}th:first-child,td:first-child{text-align:left}tr:last-child td{border-bottom:0}.rank{color:var(--muted2);width:26px;display:inline-block}.table-team{display:flex;align-items:center;gap:8px;min-width:180px;font-weight:700}.table-team .crest{width:25px;height:25px}.table-team .crest-fallback{font-size:8px}.positive{color:#65d99e}.negative{color:#ff9a9f}
-.stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:15px}.stat-box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:15px}.stat-box strong{display:block;font-size:25px;line-height:1.1;font-variant-numeric:tabular-nums}.stat-box span{display:block;color:var(--muted);font-size:10px;margin-top:7px}.group-stat{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:11px}.group-stat:first-of-type{border-top:0}.group-stat b{font-variant-numeric:tabular-nums}
-.updated{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted2);font-size:10px;padding:14px 2px}.updated a{color:#83bfff;text-decoration:none}.mobile-bottom{display:none}
-@media(max-width:850px){.layout{grid-template-columns:1fr}.sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px}.side-card{margin:0}}
-@media(max-width:600px){.appbar-inner{padding:10px 14px}.brand-mark{width:39px;height:39px}.brand-copy strong{font-size:13px}.brand-copy span{font-size:10px}.connection{font-size:0}.connection .dot{width:9px;height:9px}.page{padding:14px 10px 40px}.hero{padding:17px 15px;border-radius:14px;align-items:flex-end}.hero h1{font-size:23px}.hero p{font-size:11px;max-width:230px}.eyebrow{font-size:8px}.hero-count{padding-left:12px}.hero-count strong{font-size:23px}.hero-count span{font-size:9px;max-width:65px}.nav{width:100%;display:grid;grid-template-columns:repeat(3,1fr);margin:12px 0}.nav button{padding:10px 5px;font-size:11px}.layout{display:block}.sidebar{display:block;margin-top:14px}.side-card{margin-bottom:11px}.toolbar{padding:10px;margin-bottom:10px}.filter-row{gap:5px}.filter-chip{padding:8px 9px;font-size:10px}.control.select{flex:1;max-width:none}.control.search{flex-basis:100%}.date-heading{margin:15px 2px 7px;font-size:11px}.league-heading{padding:8px 10px;font-size:10px}.match-card{padding:10px 10px 9px}.match-head{margin-bottom:6px}.team-row{gap:8px;min-height:33px}.crest{width:29px;height:29px}.team-name{font-size:12px}.team-score{font-size:18px}.match-footer{margin-left:37px;gap:9px;font-size:9px}.events{margin-left:37px}.stats-grid{gap:7px}.stat-box{padding:11px}.stat-box strong{font-size:21px}.stat-box span{font-size:9px}.updated{padding-bottom:65px}.mobile-bottom{position:fixed;display:flex;left:0;right:0;bottom:0;z-index:19;padding:9px 14px calc(9px + env(safe-area-inset-bottom));background:#111923f2;border-top:1px solid var(--line);backdrop-filter:blur(14px);justify-content:space-around}.mobile-bottom span{color:var(--muted);font-size:9px;text-align:center}.mobile-bottom b{display:block;color:#c7d8e8;font-size:12px;margin-bottom:1px}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090d15">
+  <title>Кубок России U16 — LIVE</title>
+  <style>
+    :root{color-scheme:dark;--bg:#090d15;--panel:#111827;--panel2:#172133;--line:#263246;--muted:#8e9bb0;--text:#f4f7fb;--blue:#6ca7ff;--green:#42d392;--red:#ff6c7a;--amber:#f6c66b}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(ellipse at 50% -20%,#1c2b46 0,transparent 52%),var(--bg);color:var(--text);font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    .wrap{width:min(1040px,100%);margin:auto;padding:24px 18px 70px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:10px 0 24px;border-bottom:1px solid var(--line)}
+    .brand{display:flex;align-items:center;gap:13px}.logo{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(145deg,#234d87,#14233a);font-size:25px}
+    h1{font-size:clamp(21px,4vw,30px);line-height:1.1;margin:0;font-weight:800;letter-spacing:-.04em}.sub{color:var(--muted);font-size:13px;margin-top:5px}
+    .connection{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;white-space:nowrap}.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 12px #42d39288}
+    .hero{padding:25px 0 20px;display:flex;justify-content:space-between;align-items:end;gap:18px}.eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.16em;color:var(--blue);font-weight:800}.hero h2{font-size:clamp(25px,5vw,40px);letter-spacing:-.05em;margin:7px 0 5px}.hero p{color:var(--muted);margin:0;font-size:14px}
+    .refresh{border:1px solid var(--line);background:#121b2b;color:var(--text);border-radius:12px;padding:11px 14px;font:inherit;font-size:13px;cursor:pointer}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:4px 0 18px}.stat{background:linear-gradient(145deg,#151f30,#101725);border:1px solid var(--line);border-radius:16px;padding:14px 16px}.stat strong{font-size:26px;display:block;letter-spacing:-.04em}.stat span{font-size:12px;color:var(--muted)}
+    .toolbar{background:#101827;border:1px solid var(--line);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+    .tabs{display:flex;gap:5px;background:#0a111e;padding:4px;border-radius:11px}.tabs button{border:0;background:transparent;color:var(--muted);padding:9px 13px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer}.tabs button.active{background:#233754;color:white}
+    select,input{background:#0a111e;border:1px solid var(--line);color:var(--text);border-radius:10px;padding:10px 12px;font:inherit;font-size:13px;min-height:40px}
+    input{flex:1;min-width:150px}
+    .notice{color:var(--muted);font-size:12px;margin:0 0 14px;min-height:18px}
+    .day{margin:22px 0 10px;display:flex;align-items:center;gap:12px;color:#dce6f5;font-size:13px;font-weight:800;letter-spacing:.04em}.day:after{content:"";height:1px;background:var(--line);flex:1}
+    .match{display:grid;grid-template-columns:105px 1fr auto;align-items:center;gap:16px;padding:16px 17px;background:linear-gradient(145deg,#141e2d,#101725);border:1px solid var(--line);border-radius:15px;margin:9px 0;text-decoration:none;color:inherit;transition:border-color .15s,transform .15s}
+    .match:hover{border-color:#5279aa;transform:translateY(-1px)}
+    .time{font-variant-numeric:tabular-nums;color:#d8e4f5;font-weight:700;font-size:14px}.time small{display:block;color:var(--muted);font-weight:500;font-size:11px;margin-top:4px}
+    .teams{min-width:0}.team{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:14px;font-weight:700;min-width:0}.team+.team{margin-top:7px}.team-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.team-score{font-size:17px;min-width:24px;text-align:right;font-variant-numeric:tabular-nums}
+    .meta{font-size:11px;color:var(--muted);margin-top:9px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .right{display:flex;align-items:flex-end;flex-direction:column;gap:7px;min-width:105px}.badge{font-size:10px;font-weight:800;letter-spacing:.06em;padding:5px 8px;border-radius:7px;background:#263246;color:#c4d1e2;white-space:nowrap}.badge.live{background:#153c30;color:#69e4ad}.badge.pause{background:#46391b;color:#f5d37b}.badge.final{background:#1d3555;color:#a8cbff}.badge.result{background:#2b2a43;color:#c9b9ff}.source{font-size:10px;color:var(--muted)}
+    .empty,.error{padding:35px 20px;text-align:center;border:1px dashed var(--line);border-radius:16px;color:var(--muted);background:#0e1521}.error{color:#ff9ba4;border-color:#653a47}
+    footer{margin-top:34px;border-top:1px solid var(--line);padding-top:16px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}footer a{color:var(--blue);text-decoration:none}
+    @media(max-width:650px){.wrap{padding:16px 12px 50px}.connection{font-size:0}.connection .dot{width:10px;height:10px}.hero{align-items:start}.refresh{padding:9px 10px}.stats{gap:7px}.stat{padding:11px}.stat strong{font-size:22px}.stat span{font-size:10px}.toolbar{gap:8px}.tabs{width:100%;justify-content:space-between}.tabs button{flex:1;padding:9px 6px}.toolbar select{flex:1;min-width:0}.match{grid-template-columns:62px minmax(0,1fr);gap:10px;padding:13px 11px}.right{grid-column:2;flex-direction:row;align-items:center;justify-content:space-between;min-width:0}.time{font-size:12px}.team{font-size:13px}.team-score{font-size:16px}.meta{white-space:normal;line-height:1.3}.badge{font-size:9px}}
+  </style>
 </head>
 <body>
-<div class="appbar"><div class="appbar-inner">
-  <div class="brand"><div class="brand-mark"><b>U16</b><small>RUSSIA CUP</small></div><div class="brand-copy"><strong>ХОККЕЙ · ЦЕНТР РЕЗУЛЬТАТОВ</strong><span>Официальные данные Федерации хоккея России</span></div></div>
-  <div class="connection"><span class="dot" id="dot"></span><span id="connection">Подключение к ФХР…</span></div>
-</div></div>
-<main class="page">
-  <section class="hero"><div><div class="eyebrow">СЕЗОН 2026/2027 · 2011 Г.Р.</div><h1>Кубок России <span>U16</span></h1><p>Расписание, результаты и подтверждённые LIVE-матчи</p></div><div class="hero-count"><strong id="total">—</strong><span>матчей в календаре</span></div></section>
-  <nav class="nav" aria-label="Разделы приложения"><button class="active" data-view="matches">Матчи</button><button data-view="table">Таблица</button><button data-view="stats">Статистика</button></nav>
-  <div class="layout">
-    <section class="main">
-      <div id="match-tools" class="toolbar">
-        <div class="filter-row" role="group" aria-label="Фильтр матчей">
-          <button class="filter-chip active" data-filter="all">Все матчи</button><button class="filter-chip" data-filter="today">Сегодня</button><button class="filter-chip live" data-filter="live">● LIVE</button><button class="filter-chip" data-filter="finished">Завершённые</button><button class="filter-chip" data-filter="upcoming">Предстоящие</button>
-        </div>
-        <div class="filter-row"><select class="control select" id="group"><option value="">Все группы и этапы</option></select><select class="control select" id="date"><option value="">Все даты</option></select><input class="control search" id="search" type="search" placeholder="Поиск команды…"><button class="filter-chip" id="refresh">↻ Обновить</button></div>
-      </div>
-      <div id="view" aria-live="polite"><div class="empty">Загружаем календарь ФХР…</div></div>
+  <main class="wrap">
+    <header>
+      <div class="brand"><div class="logo">🏒</div><div><h1>Кубок России U16</h1><div class="sub">Сезон 2026/2027 · 2011 г.р.</div></div></div>
+      <div class="connection"><span class="dot" id="dot"></span><span id="connection">Подключаемся к ФХР</span></div>
+    </header>
+    <section class="hero">
+      <div><div class="eyebrow">Официальные данные ФХР</div><h2>Матчи и результаты</h2><p>Расписание, счёт и проверка LIVE по карточкам матчей</p></div>
+      <button class="refresh" id="refresh">↻ Обновить</button>
     </section>
-    <aside class="sidebar">
-      <section class="side-card"><div class="side-title"><strong>Сейчас на льду</strong><span id="live-total">LIVE</span></div><div id="live-panel"><div class="live-empty">Проверяем карточки матчей ФХР…</div></div></section>
-      <section class="side-card"><div class="side-title"><strong>О турнире</strong><span>U16 · 2011</span></div><div class="source-note">Всероссийское соревнование по хоккею среди юношей до 16 лет.<br><br>Расписание и опубликованные результаты поступают из официального календаря ФХР. Статус LIVE подтверждается по карточке матча, а не только по наличию счёта.<br><br><a href="https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/" target="_blank" rel="noopener">Открыть календарь ФХР ↗</a></div></section>
-    </aside>
-  </div>
-  <div class="updated"><span id="updated">Автоматическое обновление включено</span><span>Источник: <a href="https://junior.fhr.ru/" target="_blank" rel="noopener">junior.fhr.ru</a></span></div>
-</main>
-<div class="mobile-bottom" aria-hidden="true"><span><b>●</b>Результаты</span><span><b>↻</b>Автообновление</span><span><b>U16</b>2026/27</span></div>
+    <section class="stats">
+      <div class="stat"><strong id="total">—</strong><span>Матчей в календаре</span></div>
+      <div class="stat"><strong id="liveCount">—</strong><span>Сейчас LIVE</span></div>
+      <div class="stat"><strong id="groupsCount">—</strong><span>Групп и этапов</span></div>
+    </section>
+    <section class="toolbar">
+      <div class="tabs" role="group" aria-label="Фильтр матчей">
+        <button class="active" data-filter="today">Сегодня</button>
+        <button data-filter="all">Все матчи</button>
+        <button data-filter="live">LIVE</button>
+      </div>
+      <select id="group"><option value="">Все группы</option></select>
+      <input id="search" type="search" placeholder="Найти команду…">
+    </section>
+    <p class="notice" id="notice">Загружаем официальный календарь…</p>
+    <section id="matches" aria-live="polite"><div class="empty">Загружаем матчи ФХР…</div></section>
+    <footer><span id="updated">Обновление автоматически</span><span>Источник: <a href="https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/" target="_blank" rel="noopener">Федерация хоккея России</a></span></footer>
+  </main>
 <script>
 (() => {
-  const state={matches:[],live:null,view:"matches",filter:"all",group:"",date:"",search:"",loading:false,lastCalendar:null,lastLive:null};
-  const $=id=>document.getElementById(id);
-  const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-  const mskDate=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
-  const dateLabel=value=>new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",weekday:"long",day:"numeric",month:"long"}).format(new Date(value+"T12:00:00+03:00"));
-  const dateShort=value=>new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",day:"numeric",month:"short"}).format(new Date(value+"T12:00:00+03:00"));
-  const initials=name=>{const words=String(name||"").replace(/[()]/g," ").split(/\s+/).filter(Boolean);if(!words.length)return "ХК";return words.length===1?words[0].slice(0,2).toUpperCase():(words[0][0]+words[1][0]).toUpperCase()};
-  const teamLogo=(name,url)=>{const fallback='<span class="crest-fallback" style="display:grid">'+esc(initials(name))+'</span>';if(!url)return '<div class="crest">'+fallback+'</div>';return '<div class="crest"><img src="'+esc(url)+'" alt="" loading="lazy" decoding="async" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'grid\'"><span class="crest-fallback">'+esc(initials(name))+'</span></div>'};
-  const statusInfo=status=>{if(status==="LIVE")return ["LIVE","live"];if(status==="LIVE_PAUSED")return ["ПЕРЕРЫВ","pause"];if(status==="FINAL")return ["ЗАВЕРШЁН","final"];if(status==="SCORE_AVAILABLE")return ["РЕЗУЛЬТАТ","result"];return ["ЗАПЛАНИРОВАН",""]};
-  const displayScore=(value,status)=>value==null?(status==="SCHEDULED"?"—":"·"):String(value);
-  const isLive=m=>m.status==="LIVE"||m.status==="LIVE_PAUSED";
-  const hasResult=m=>m.homeScore!=null&&m.awayScore!=null;
-  const matchHref=m=>m.matchUrl||(m.gameId?"https://junior.fhr.ru/games/"+m.gameId+"/":"https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/");
-  async function getJson(path){const response=await fetch(path,{cache:"no-store"});if(!response.ok)throw new Error("HTTP "+response.status);return response.json()}
-  function mergeLive(){const details=new Map(((state.live&&state.live.checkedMatches)||[]).filter(x=>x&&x.ok!==false).map(x=>[String(x.gameId),x]));state.matches=state.matches.map(m=>{const d=details.get(String(m.gameId));if(!d)return m;return {...m,status:d.status||m.status,homeScore:d.homeScore==null?m.homeScore:d.homeScore,awayScore:d.awayScore==null?m.awayScore:d.awayScore,periodScores:d.periodScores||[],period:d.period||null,clock:d.clock||null,statusText:d.statusText||null,events:d.events||[],homeLogo:m.homeLogo||d.homeLogo||null,awayLogo:m.awayLogo||d.awayLogo||null}})}
-  function populateFilters(data){
-    const groups=[...new Set((data.groups||state.matches.map(m=>({name:m.group}))).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
-    const group=$("group"),previousGroup=state.group||group.value;group.innerHTML='<option value="">Все группы и этапы</option>'+groups.map(x=>'<option value="'+esc(x)+'">'+esc(x)+'</option>').join("");group.value=groups.includes(previousGroup)?previousGroup:"";state.group=group.value;
-    const dates=[...new Set(state.matches.map(m=>m.date).filter(Boolean))].sort();const date=$("date"),previousDate=state.date||date.value;date.innerHTML='<option value="">Все даты</option>'+dates.map(x=>'<option value="'+esc(x)+'">'+esc(dateShort(x))+'</option>').join("");date.value=dates.includes(previousDate)?previousDate:"";state.date=date.value;
+  const API = "";
+  const state = { matches: [], live: [], filter: "today", group: "", search: "", lastCalendar: null, lastLive: null, loading: false };
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[ch]));
+  const mskDate = () => new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Moscow",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const dateLabel = value => {
+    const d = new Date(value + "T12:00:00+03:00");
+    return new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",weekday:"long",day:"numeric",month:"long"}).format(d);
+  };
+  const clockLabel = value => value || "Время уточняется";
+  const badge = status => {
+    if(status==="LIVE") return '<span class="badge live">● LIVE</span>';
+    if(status==="LIVE_PAUSED") return '<span class="badge pause">ПЕРЕРЫВ</span>';
+    if(status==="FINAL") return '<span class="badge final">ЗАВЕРШЁН</span>';
+    if(status==="SCORE_AVAILABLE") return '<span class="badge result">РЕЗУЛЬТАТ</span>';
+    return '<span class="badge">ЗАПЛАНИРОВАН</span>';
+  };
+  const score = (value, status) => value == null ? (status==="SCHEDULED" ? "—" : "·") : String(value);
+  function mergeLive() {
+    const detail = new Map((state.live?.checkedMatches || []).filter(x=>x && x.ok!==false).map(x=>[String(x.gameId),x]));
+    state.matches = state.matches.map(match => {
+      const d = detail.get(String(match.gameId));
+      if(!d) return match;
+      return {
+        ...match,
+        status: d.status || match.status,
+        homeScore: d.homeScore == null ? match.homeScore : d.homeScore,
+        awayScore: d.awayScore == null ? match.awayScore : d.awayScore,
+        periodScores: d.periodScores || [],
+        period: d.period || null,
+        clock: d.clock || null,
+        statusText: d.statusText || null,
+        events: d.events || []
+      };
+    });
   }
-  async function loadCalendar(){const data=await getJson("/api/v1/matches");if(!data.ok)throw new Error(data.detail||data.error||"Календарь ФХР недоступен");state.matches=data.matches||[];state.lastCalendar=data.fetchedAt;populateFilters(data);$("total").textContent=data.matchesCount??state.matches.length;$("dot").className="dot ok";$("connection").textContent="ФХР · подключено";return data}
-  async function loadLive(){const data=await getJson("/api/v1/live");if(!data.ok)throw new Error(data.detail||data.error||"LIVE-проверка недоступна");state.live=data;state.lastLive=data.fetchedAt;mergeLive();$("live-total").textContent=(data.matches||[]).length+" матч.";renderLivePanel();return data}
-  function filteredMatches(){const query=state.search.trim().toLocaleLowerCase("ru"),today=mskDate();let list=state.matches.slice();if(state.filter==="today")list=list.filter(m=>m.date===today);if(state.filter==="live")list=list.filter(isLive);if(state.filter==="finished")list=list.filter(m=>m.status==="FINAL"||m.status==="SCORE_AVAILABLE");if(state.filter==="upcoming")list=list.filter(m=>!hasResult(m)&&!isLive(m));if(state.group)list=list.filter(m=>m.group===state.group);if(state.date)list=list.filter(m=>m.date===state.date);if(query)list=list.filter(m=>(String(m.home||"")+" "+String(m.away||"")+" "+String(m.group||"")).toLocaleLowerCase("ru").includes(query));list.sort((a,b)=>(a.date+a.timeMsk).localeCompare(b.date+b.timeMsk));return list}
-  function renderMatches(){
-    const list=filteredMatches();if(!list.length){$("view").innerHTML='<div class="empty">'+(state.filter==="live"?"Сейчас нет подтверждённых LIVE-матчей.":"Матчей по выбранным фильтрам не найдено.")+'</div>';return}
-    let html="",lastDate="",lastGroup="";
-    for(const m of list){
-      if(m.date!==lastDate){lastDate=m.date;lastGroup="";html+='<div class="date-heading">'+esc(dateLabel(m.date))+'</div>'}
-      const groupName=m.group||"Кубок России U16";if(groupName!==lastGroup){lastGroup=groupName;html+='<div class="league-heading"><span class="league-dot"></span>'+esc(groupName)+'<small>Кубок России U16</small></div>'}
-      const status=statusInfo(m.status),homeWinner=hasResult(m)&&m.homeScore>m.awayScore,awayWinner=hasResult(m)&&m.awayScore>m.homeScore;
-      const periods=(m.periodScores||[]).length?'<span class="periods">Периоды: '+m.periodScores.map(p=>esc(p.home)+':'+esc(p.away)).join(" · ")+'</span>':"";
-      const liveDetail=isLive(m)?'<span class="live-detail">'+esc([m.period?"Период "+m.period:"",m.clock||"",m.statusText||""].filter(Boolean).join(" · "))+'</span>':"";
-      const arena=m.arena?'<span>⌖ '+esc(m.arena)+'</span>':"";
-      const eventList=(m.events||[]).slice(-3).map(e=>'<div>'+esc([e.score,e.description].filter(Boolean).join(" · "))+'</div>').join("");
-      html+='<a class="match-card" href="'+esc(matchHref(m))+'" target="_blank" rel="noopener">'+
-        '<div class="match-head"><span class="match-time">'+esc(m.timeMsk||"Время уточняется")+' МСК</span><span class="match-number">№ '+esc(m.matchNumber??"—")+'</span><span class="status '+status[1]+'">'+status[0]+'</span></div>'+
-        '<div class="match-body"><div class="teams">'+
-        '<div class="team-row">'+teamLogo(m.home,m.homeLogo)+'<span class="team-name">'+esc(m.home||"Участник уточняется")+'</span><strong class="team-score '+(homeWinner?"winner":"")+'">'+esc(displayScore(m.homeScore,m.status))+'</strong></div>'+
-        '<div class="team-row">'+teamLogo(m.away,m.awayLogo)+'<span class="team-name">'+esc(m.away||"Участник уточняется")+'</span><strong class="team-score '+(awayWinner?"winner":"")+'">'+esc(displayScore(m.awayScore,m.status))+'</strong></div></div></div>'+
-        '<div class="match-footer">'+arena+periods+liveDetail+'</div>'+(eventList?'<div class="events">'+eventList+'</div>':"")+'</a>';
+  async function getJson(path) {
+    const response = await fetch(API + path,{cache:"no-store"});
+    if(!response.ok) throw new Error("HTTP " + response.status);
+    return response.json();
+  }
+  async function loadCalendar() {
+    const data = await getJson("/api/v1/matches");
+    if(!data.ok) throw new Error(data.detail || data.error || "Не удалось получить календарь");
+    state.matches = data.matches || [];
+    state.lastCalendar = data.fetchedAt;
+    const names = [...new Set((data.groups || state.matches.map(m=>({name:m.group}))).map(x=>x.name).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
+    const select = $("group");
+    const previous = select.value;
+    select.innerHTML = '<option value="">Все группы</option>' + names.map(name=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join("");
+    select.value = names.includes(previous) ? previous : "";
+    $("total").textContent = data.matchesCount ?? state.matches.length;
+    $("groupsCount").textContent = names.length || data.groupsFetched || "—";
+    $("connection").textContent = "Связь с ФХР активна";
+    $("dot").style.background = "var(--green)";
+    return data;
+  }
+  async function loadLive() {
+    const data = await getJson("/api/v1/live");
+    if(!data.ok) throw new Error(data.detail || data.error || "LIVE-проверка недоступна");
+    state.live = data;
+    state.lastLive = data.fetchedAt;
+    $("liveCount").textContent = (data.matches || []).length;
+    const checkText = data.errors?.length
+      ? "Есть ошибки проверки LIVE"
+      : (data.checkedCount
+        ? (data.liveVerified ? "Проверено карточек: "+data.checkedCount : "Проверка LIVE неполная")
+        : "Сейчас нет матчей в окне проверки — LIVE пока не подтверждён");
+    $("notice").textContent = checkText + (data.notice ? " · " + data.notice : "");
+    mergeLive();
+    return data;
+  }
+  function render() {
+    const today = mskDate();
+    const query = state.search.trim().toLocaleLowerCase("ru");
+    let list = state.matches.slice();
+    if(state.filter==="today") list=list.filter(m=>m.date===today);
+    if(state.filter==="live") list=list.filter(m=>m.status==="LIVE"||m.status==="LIVE_PAUSED");
+    if(state.group) list=list.filter(m=>m.group===state.group);
+    if(query) list=list.filter(m=>(m.home+" "+m.away+" "+m.group).toLocaleLowerCase("ru").includes(query));
+    list.sort((a,b)=>(a.date+a.timeMsk).localeCompare(b.date+b.timeMsk));
+    if(!list.length) {
+      $("matches").innerHTML='<div class="empty">'+(state.filter==="live"?"Сейчас нет подтверждённых LIVE-матчей.":"Матчей по этому фильтру нет.")+'</div>';
+      return;
     }
-    $("view").innerHTML=html;
+    let currentDay="";
+    let html="";
+    for(const m of list) {
+      if(m.date!==currentDay) {
+        currentDay=m.date;
+        html+='<div class="day">'+esc(dateLabel(m.date))+'</div>';
+      }
+      const hasScore=m.homeScore!=null&&m.awayScore!=null;
+      const period=(m.periodScores||[]).length ? '<div class="meta">По периодам: '+m.periodScores.map(p=>p.home+":"+p.away).join(" · ")+'</div>' : "";
+      const liveMeta=(m.status==="LIVE"||m.status==="LIVE_PAUSED") ? '<div class="meta">'+esc([m.period?("Период "+m.period):"",m.clock||"",m.statusText||""].filter(Boolean).join(" · "))+'</div>' : "";
+      const events=(m.events||[]).slice(-3).map(e=>'<div class="meta">'+esc([e.score,e.description].filter(Boolean).join(" · "))+'</div>').join("");
+      const matchHref=m.matchUrl||(m.gameId?("https://junior.fhr.ru/games/"+m.gameId+"/"):"https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/");
+      html+='<a class="match" href="'+esc(matchHref)+'" target="_blank" rel="noopener">'+
+        '<div class="time">'+esc(clockLabel(m.timeMsk))+'<small>МСК · №'+esc(m.matchNumber??"—")+'</small></div>'+
+        '<div class="teams">'+
+          '<div class="team"><span class="team-name">'+esc(m.home||"Участник уточняется")+'</span><span class="team-score">'+esc(score(m.homeScore,m.status))+'</span></div>'+
+          '<div class="team"><span class="team-name">'+esc(m.away||"Участник уточняется")+'</span><span class="team-score">'+esc(score(m.awayScore,m.status))+'</span></div>'+
+          '<div class="meta">'+esc(m.group||"Кубок России U16")+(m.arena?" · "+esc(m.arena):"")+'</div>'+period+liveMeta+events+
+        '</div>'+
+        '<div class="right">'+badge(m.status)+(m.statusText?'<span class="source">'+esc(m.statusText)+'</span>':hasScore&&m.status==="SCORE_AVAILABLE"?'<span class="source">Данные календаря ФХР</span>':'<span class="source">ФХР</span>')+'</div>'+
+      '</a>';
+    }
+    $("matches").innerHTML=html;
   }
-  function renderLivePanel(){
-    const live=(state.live&&state.live.matches)||[];if(!live.length){const checked=state.live&&state.live.checkedCount;$("live-panel").innerHTML='<div class="live-empty">'+(checked?"Проверенные матчи сейчас не идут.":"Нет матчей в текущем окне проверки.")+'</div>';return}
-    $("live-panel").innerHTML=live.map(m=>{const s=statusInfo(m.status);return '<a class="mini-match" href="'+esc(matchHref(m))+'" target="_blank" rel="noopener"><div class="mini-head"><span>'+esc(m.timeMsk||"LIVE")+'</span><span class="status '+s[1]+'">'+s[0]+'</span></div><div class="mini-team">'+teamLogo(m.home,m.homeLogo)+'<span>'+esc(m.home||"Команда")+'</span><b>'+esc(displayScore(m.homeScore,m.status))+'</b></div><div class="mini-team">'+teamLogo(m.away,m.awayLogo)+'<span>'+esc(m.away||"Команда")+'</span><b>'+esc(displayScore(m.awayScore,m.status))+'</b></div></a>'}).join("")
+  async function refreshAll() {
+    if(state.loading) return;
+    state.loading=true;
+    $("refresh").textContent="Обновляем…";
+    try {
+      await loadCalendar();
+      try { await loadLive(); } catch(error) {
+        $("notice").textContent="Календарь обновлён; LIVE-проверка временно недоступна: "+error.message;
+      }
+      render();
+      const stamp = state.lastLive || state.lastCalendar;
+      $("updated").textContent="Обновлено: "+new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date(stamp));
+    } catch(error) {
+      $("connection").textContent="Нет связи с API";
+      $("dot").style.background="var(--red)";
+      $("matches").innerHTML='<div class="error">Не удалось загрузить данные ФХР: '+esc(error.message)+'</div>';
+    } finally {
+      state.loading=false;
+      $("refresh").textContent="↻ Обновить";
+    }
   }
-  function standings(){
-    const rows=new Map();for(const m of state.matches){const group=m.group||"Кубок России U16";for(const side of ["home","away"]){const name=m[side];if(!name)continue;const key=group+"|"+name;if(!rows.has(key))rows.set(key,{group,name,logo:m[side+"Logo"],played:0,wins:0,losses:0,gf:0,ga:0})}
-      if(!hasResult(m)||!m.home||!m.away)continue;const h=rows.get(group+"|"+m.home),a=rows.get(group+"|"+m.away);if(!h||!a)continue;h.played++;a.played++;h.gf+=Number(m.homeScore);h.ga+=Number(m.awayScore);a.gf+=Number(m.awayScore);a.ga+=Number(m.homeScore);if(m.homeScore>m.awayScore){h.wins++;a.losses++}else if(m.awayScore>m.homeScore){a.wins++;h.losses++}}
-    const groups=[...new Set([...rows.values()].map(x=>x.group))].sort((a,b)=>a.localeCompare(b,"ru"));return {groups,rows}
-  }
-  function renderTable(){
-    const data=standings(),groups=state.group?data.groups.filter(x=>x===state.group):data.groups;if(!groups.length){$("view").innerHTML='<div class="empty">Пока нет данных для таблицы.</div>';return}
-    let html='<div class="section-heading"><h2>Турнирные таблицы</h2><span>по опубликованным результатам ФХР</span></div>';
-    for(const group of groups){const list=[...data.rows.values()].filter(x=>x.group===group).sort((a,b)=>(b.wins-a.wins)||((b.gf-b.ga)-(a.gf-a.ga))||(b.gf-a.gf)||a.name.localeCompare(b.name,"ru"));html+='<div class="table-wrap"><div class="table-title">'+esc(group)+'</div><table><thead><tr><th>Команда</th><th>И</th><th>В</th><th>П</th><th>Ш</th><th>+/-</th></tr></thead><tbody>';
-      html+=list.map((t,i)=>{const diff=t.gf-t.ga;return '<tr><td><div class="table-team"><span class="rank">'+(i+1)+'</span>'+teamLogo(t.name,t.logo)+'<span>'+esc(t.name)+'</span></div></td><td>'+t.played+'</td><td>'+t.wins+'</td><td>'+t.losses+'</td><td>'+t.gf+':'+t.ga+'</td><td class="'+(diff>0?"positive":diff<0?"negative":"")+'">'+(diff>0?"+":"")+diff+'</td></tr>'}).join("");html+='</tbody></table></div>'}
-    $("view").innerHTML=html
-  }
-  function renderStats(){
-    const completed=state.matches.filter(hasResult),goals=completed.reduce((sum,m)=>sum+Number(m.homeScore)+Number(m.awayScore),0),live=state.matches.filter(isLive).length,upcoming=state.matches.filter(m=>!hasResult(m)&&!isLive(m)).length,groups=[...new Set(state.matches.map(m=>m.group).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"ru"));
-    let html='<div class="section-heading"><h2>Обзор турнира</h2><span>сезон 2026/2027</span></div><div class="stats-grid">'+
-      '<div class="stat-box"><strong>'+state.matches.length+'</strong><span>Матчей в календаре</span></div><div class="stat-box"><strong>'+completed.length+'</strong><span>Матчей со счётом</span></div><div class="stat-box"><strong>'+goals+'</strong><span>Заброшено шайб</span></div><div class="stat-box"><strong>'+live+'</strong><span>Сейчас LIVE</span></div><div class="stat-box"><strong>'+upcoming+'</strong><span>Без опубликованного результата</span></div><div class="stat-box"><strong>'+groups.length+'</strong><span>Групп и этапов</span></div></div><div class="table-wrap"><div class="table-title">Матчи по группам и этапам</div><div style="padding:0 14px">';
-    html+=groups.map(group=>{const all=state.matches.filter(m=>m.group===group),played=all.filter(hasResult).length;return '<div class="group-stat"><span>'+esc(group)+'</span><b>'+played+' / '+all.length+'</b></div>'}).join("");
-    html+='</div></div><p class="source-note">Статистика рассчитана по матчам и счетам, опубликованным в календаре ФХР. Данные игроков и бросков здесь не подменяются расчётными значениями.</p>';$("view").innerHTML=html
-  }
-  function render(){if(state.view==="table")renderTable();else if(state.view==="stats")renderStats();else renderMatches()}
-  function setView(view){state.view=view;document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));$("match-tools").style.display=view==="matches"?"":"none";render()}
-  async function refreshAll(){
-    if(state.loading)return;state.loading=true;$("refresh").textContent="Обновляем…";
-    try{await loadCalendar();try{await loadLive()}catch(error){$("live-panel").innerHTML='<div class="live-empty">LIVE-проверка временно недоступна.</div>'}render();const stamp=state.lastLive||state.lastCalendar;$("updated").textContent="Обновлено: "+new Intl.DateTimeFormat("ru-RU",{timeZone:"Europe/Moscow",hour:"2-digit",minute:"2-digit",second:"2-digit"}).format(new Date(stamp))+" МСК · LIVE обновляется каждые 15 сек."}
-    catch(error){$("dot").className="dot bad";$("connection").textContent="Нет связи с API";$("view").innerHTML='<div class="error">Не удалось загрузить календарь ФХР: '+esc(error.message)+'</div>'}
-    finally{state.loading=false;$("refresh").textContent="↻ Обновить"}
-  }
-  document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
-  document.querySelectorAll("[data-filter]").forEach(b=>b.addEventListener("click",()=>{state.filter=b.dataset.filter;document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===b));render()}));
-  $("group").addEventListener("change",e=>{state.group=e.target.value;render()});$("date").addEventListener("change",e=>{state.date=e.target.value;render()});$("search").addEventListener("input",e=>{state.search=e.target.value;render()});$("refresh").addEventListener("click",refreshAll);
-  refreshAll();setInterval(async()=>{try{await loadLive();render()}catch(error){$("live-panel").innerHTML='<div class="live-empty">Не удалось обновить LIVE.</div>'}},15000);
-  setInterval(async()=>{try{await loadCalendar();mergeLive();render()}catch(error){}},60000);
+  document.querySelectorAll("[data-filter]").forEach(button=>button.addEventListener("click",()=>{
+    state.filter=button.dataset.filter;
+    document.querySelectorAll("[data-filter]").forEach(x=>x.classList.toggle("active",x===button));
+    render();
+  }));
+  $("group").addEventListener("change",event=>{state.group=event.target.value;render();});
+  $("search").addEventListener("input",event=>{state.search=event.target.value;render();});
+  $("refresh").addEventListener("click",refreshAll);
+  refreshAll();
+  setInterval(async()=>{try{await loadLive();render();}catch(error){$("notice").textContent="LIVE-проверка: "+error.message;}},15000);
+  setInterval(async()=>{try{await loadCalendar();mergeLive();render();}catch(error){}},60000);
 })();
 </script>
 </body>
