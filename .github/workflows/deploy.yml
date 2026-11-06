@@ -19,3 +19,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+      - name: Smoke test FHR feed
+        run: |
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/source | jq '{ok, calendarStatus, calendarCount, calendarMinDate, calendarMaxDate, homeStatus, homeTitle, links, scripts}'
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq '{ok, fetchedAt, refreshHintSeconds, liveVerified, matchesCount: (.matches | length), firstMatch: .matches[0], lastMatch: .matches[-1]}'
