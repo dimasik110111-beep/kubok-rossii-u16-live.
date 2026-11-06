@@ -168,6 +168,44 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/v1/debug/game") {
+      const gameId = url.searchParams.get("id") || "";
+      if (!/^\d{5,12}$/.test(gameId)) return json({ ok: false, error: "Provide numeric FHR game id" }, 400, 0);
+      try {
+        const gameUrl = "https://junior.fhr.ru/games/" + gameId + "/";
+        const response = await fetch(gameUrl, {
+          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
+          redirect: "follow"
+        });
+        const html = await response.text();
+        const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
+        const scriptSrcs = [...html.matchAll(/<script[^>]*src=["']([^"']+)["']/gi)].map(m => m[1]).slice(0, 50);
+        const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map(m => m[1])
+          .filter(x => /api|ajax|game|match|stat|protocol|event/i.test(x)).slice(0, 80);
+        const inlineScripts = [...html.matchAll(/<script\b(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/gi)]
+          .map(m => m[1]).filter(x => /game|match|ajax|api|score|period|event/i.test(x))
+          .map(x => x.slice(0, 1800)).slice(0, 12);
+        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 5000);
+        const markers = [...html.matchAll(/.{0,100}(?:live|period|score|game_id|gameId|match_id|matchId|ajax|api).{0,180}/gi)]
+          .map(m => m[0].replace(/\s+/g, " ").slice(0, 280)).slice(0, 35);
+        return json({
+          ok: response.ok,
+          httpStatus: response.status,
+          finalUrl: response.url,
+          contentType: response.headers.get("content-type"),
+          htmlLength: html.length,
+          title: cellText(title),
+          textPreview,
+          scriptSrcs,
+          hrefs,
+          inlineScripts,
+          markers
+        }, 200, 0);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/debug/source") {
       try {
         const [calendarResponse, homeResponse] = await Promise.all([
