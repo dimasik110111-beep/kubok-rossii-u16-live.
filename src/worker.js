@@ -168,6 +168,25 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/v1/debug/tournament") {
+      try {
+        const tournamentUrl = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/";
+        const response = await fetch(tournamentUrl, {
+          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
+          redirect: "follow"
+        });
+        const html = await response.text();
+        const links = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 140) }))
+          .filter(x => /games\/|calendar|kubokrossii/i.test(x.href) || /2011 г\.р\.|группа|матч/i.test(x.text)).slice(0, 180);
+        const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
+        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 14000);
+        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, title: cellText(title), textPreview, links }, 200, 0);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/debug/game") {
       const gameId = url.searchParams.get("id") || "";
       if (!/^\d{5,12}$/.test(gameId)) return json({ ok: false, error: "Provide numeric FHR game id" }, 400, 0);
