@@ -24,6 +24,8 @@ jobs:
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/source | jq '{ok, calendarStatus, calendarCount, calendarMinDate, calendarMaxDate, homeStatus, homeTitle, links, scripts}'
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq '{ok, fetchedAt, refreshHintSeconds, groupsFetched, groupErrors, liveVerified, matchesCount: (.matches | length), firstMatch: .matches[0], lastMatch: .matches[-1]}'
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26349466 | jq '{ok, gameId, matchNumber, home, away, homeScore, awayScore, periodScores, status, statusText, dateText, events, liveVerified}'
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq '{ok, gameId, matchNumber, home, away, homeScore, awayScore, periodScores, status, statusText, dateText, events, liveVerified}'
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq '{ok, fetchedAt, refreshHintSeconds, liveVerified, checkedCount, matches, checkedMatches, errors, notice}'
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=25170375' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, scriptSrcs, hrefs, inlineScripts, markers, snippets}'
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349776' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349466' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
