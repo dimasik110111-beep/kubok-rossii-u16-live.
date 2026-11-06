@@ -1,0 +1,40 @@
+name: Inspect FHR full leaderboard JSON endpoint
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-v14-stat-rows.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,urllib.parse,json,re
+          from bs4 import BeautifulSoup
+          base='https://junior.fhr.ru'
+          url=base+'/tournaments/kubokrossii-25008909/stats/'
+          soup=BeautifulSoup(urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=25).read(),'html.parser')
+          for key in ['BOMBARDIRS','SNIPERS','GOALKEEPER','GOALKEEPER_KN']:
+            a=soup.select_one('a[data-ajax-link*="stats='+key+'"]')
+            link=urllib.parse.urljoin(url,a['data-ajax-link'])
+            sub=BeautifulSoup(urllib.request.urlopen(urllib.request.Request(link,headers={'User-Agent':'Mozilla/5.0'}),timeout=25).read(),'html.parser')
+            holder=sub.select_one('[data-ajax*="getDataTableSimpleStats"]')
+            if not holder:
+              print('MISSING GETDATA',key,flush=True);continue
+            target=urllib.parse.urljoin(url,holder['data-ajax'])
+            req=urllib.request.Request(target,headers={'User-Agent':'Mozilla/5.0','Referer':link,'X-Requested-With':'XMLHttpRequest','Accept':'application/json,text/html,*/*'})
+            try:
+              response=urllib.request.urlopen(req,timeout=45)
+              data=response.read()
+              print('###',key,'url',target,'status',response.status,'type',response.headers.get('content-type'),'bytes',len(data),flush=True)
+              print('HEAD',data[:6000].decode('utf-8','ignore'),flush=True)
+              try:
+                j=json.loads(data)
+                if isinstance(j,dict):
+                  print('KEYS',list(j.keys()),'DRAW',j.get('draw'),'TOTAL',j.get('recordsTotal'),'FILTERED',j.get('recordsFiltered'),'NUM_ROWS',len(j.get('data',[])),flush=True)
+                  print('ROW',repr(j.get('data',[None])[0])[:6000],flush=True)
+              except Exception as e:print('NOT_JSON',repr(e),flush=True)
+            except Exception as e:print('ERROR',key,repr(e),flush=True)
+          PY
