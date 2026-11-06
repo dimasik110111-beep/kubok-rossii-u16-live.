@@ -1,0 +1,38 @@
+name: Inspect verified FHR match-specific lineup
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-match-lineup.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 -m pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import re,urllib.request
+          from bs4 import BeautifulSoup
+          for gid in [25170469,26350481]:
+            url=f'https://junior.fhr.ru/games/{gid}/'
+            r=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'})
+            html=urllib.request.urlopen(r,timeout=40).read().decode('utf-8','ignore')
+            soup=BeautifulSoup(html,'html.parser')
+            print('### MATCH',gid,'BYTES',len(html),flush=True)
+            for sel in ['.match-team-tab','.match-composition-tab','.match-protocol-tab','.match-history-tab','.game-team-tab','.match-team-composition',
+              '.match-player','.match-player-card','.team-composition','.team-list','.team-roster','.team-lineup','.team-player-card',
+              '.player-card','.match-team','.player-number','.match-team-tab table','.match-team-tab a[href*="/player/"]']:
+              els=soup.select(sel)
+              print(sel,len(els),flush=True)
+              if els and any(x in sel for x in ['match-team-tab','composition','lineup','.match-player']):
+                print(' sample',str(els[0])[:5500].replace('\n',' '),flush=True)
+            for e in soup.select('[data-tab-name]')[:30]:
+              print('TAB',e.get('data-tab-name'),e.get('class'),e.get_text(' ',strip=True)[:100],flush=True)
+            for txt in ['Состав команд','Состав команды','team-tab','team-roster','match-team','lineup','/player/','data-ajax','ajax_team','match-detail','teamComposition','team-players']:
+              p=html.find(txt)
+              if p>=0:print('TEXT',txt,re.sub(r'\s+',' ',html[max(0,p-250):p+900])[:1150],flush=True)
+            teamtab=soup.select_one('.match-team-tab')
+            if teamtab:
+              print('TEAMTAB text',teamtab.get_text(' ',strip=True)[:6500],flush=True)
+              print('TEAMTAB attrs',[(x.name,x.get('class'),x.get('data-ajax'),x.get('data-url')) for x in teamtab.find_all(True,limit=18)],flush=True)
+          PY
