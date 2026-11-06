@@ -59,29 +59,39 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const numberText = cellText(cells[0]);
     if (!/^\d{1,8}$/.test(numberText)) continue;
 
-    const dateIndex = cells.findIndex(cell => /\d{2}\.\d{2}\.20\d{2}\s+\d{2}:\d{2}/.test(cellText(cell)));
+    const dateIndex = cells.findIndex(cell => /\d{2}\.\d{2}\.20\d{2}/.test(cellText(cell)));
     if (dateIndex < 0) continue;
-    const dateText = cellText(cells[dateIndex]);
-    const dateMatch = dateText.match(/(\d{2})\.(\d{2})\.(20\d{2})\s+(\d{2}):(\d{2})/);
+    let dateText = cellText(cells[dateIndex]);
+    let dateMatch = dateText.match(/(\d{2})\.(\d{2})\.(20\d{2})(?:\s+(\d{2}):(\d{2}))?/);
     if (!dateMatch) continue;
 
-    let homeIndex = dateIndex + 1;
-    let awayIndex = dateIndex + 2;
-    let scoreIndex = dateIndex + 3;
-    let arenaIndex = dateIndex + 4;
-
-    const nextCell = cellText(cells[dateIndex + 1] || "");
-    if (/(?:^|\s)(?:ЛА|МАУ|Арена|ледов|дворец)/i.test(nextCell)) {
-      arenaIndex = dateIndex + 1;
-      homeIndex = dateIndex + 2;
-      awayIndex = dateIndex + 3;
-      scoreIndex = dateIndex + 4;
+    let nextIndex = dateIndex + 1;
+    let timeMsk = dateMatch[4] ? dateMatch[4] + ":" + dateMatch[5] : "";
+    if (!timeMsk && cells[nextIndex] && /^\d{1,2}:\d{2}(?:\s|$)/.test(cellText(cells[nextIndex]))) {
+      timeMsk = cellText(cells[nextIndex]).match(/(\d{1,2}:\d{2})/)[1];
+      nextIndex += 1;
     }
 
-    const home = cellText(cells[homeIndex] || "");
-    const away = cellText(cells[awayIndex] || "");
-    const scoreCell = cellText(cells[scoreIndex] || "");
-    const arena = cellText(cells[arenaIndex] || "");
+    const arenaIndex = cells.findIndex((cell, index) =>
+      index >= nextIndex && /(?:ЛА\b|МАУ\b|Арена|ледов|дворец|спортивн)/i.test(cellText(cell))
+    );
+    const scoreIndex = cells.findIndex((cell, index) =>
+      index >= nextIndex && /(?:^|\s)\d{1,2}\s*:\s*\d{1,2}(?:\s|$)/.test(cellText(cell))
+    );
+
+    const teamIndexes = [];
+    for (let i = nextIndex; i < cells.length; i++) {
+      if (i === arenaIndex || i === scoreIndex) continue;
+      const value = cellText(cells[i]);
+      if (!value || /^\d{1,2}:\d{2}$/.test(value) || /^\d{2}\.\d{2}\.20\d{2}/.test(value)) continue;
+      if (/^(?:ОТ|ПБ|ПП|МСК)$/i.test(value)) continue;
+      teamIndexes.push(i);
+    }
+
+    const home = teamIndexes.length >= 2 ? cellText(cells[teamIndexes[0]]) : "";
+    const away = teamIndexes.length >= 2 ? cellText(cells[teamIndexes[1]]) : "";
+    const scoreCell = scoreIndex >= 0 ? cellText(cells[scoreIndex]) : "";
+    const arena = arenaIndex >= 0 ? cellText(cells[arenaIndex]) : "";
     if (!home || !away || home === away || /^\d{1,2}$/.test(home) || /^\d{1,2}$/.test(away)) continue;
 
     const scoreMatch = scoreCell.match(/(?:^|\s)(\d{1,2})\s*:\s*(\d{1,2})(?:\s|$)/);
@@ -110,7 +120,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       matchNumber: Number(numberText),
       group: groupName || null,
       date,
-      timeMsk: dateMatch[4] + ":" + dateMatch[5],
+      timeMsk,
       home,
       away,
       homeScore: scoreMatch ? Number(scoreMatch[1]) : null,
