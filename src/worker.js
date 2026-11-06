@@ -402,7 +402,7 @@ function parseTeamsMarkup(html, stage) {
     const city=(body.match(/<span\b[^>]*class=["'][^"']*\bteam-city\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)||[])[1];
     const name=cellText(title)||cellText(body);
     if (!name) continue;
-    const image=(body.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)||[])[1];
+    const image=(body.match(/\bsrc=["'](https:\/\/img\.fhr\.ru\/(?:teams|players)\/[^"']+)["']/i)||[])[1];
     entries.push({
       id:teamId, name, city:cellText(city), fullName:[name,cellText(city)].filter(Boolean).join(" "),
       logo:onlyFhrImage(image,"teams"),
@@ -413,7 +413,7 @@ function parseTeamsMarkup(html, stage) {
 }
 
 async function getTeams() {
-  const key = new Request("https://cache.kubok-u16-live/api/v1/teams");
+  const key = new Request("https://cache.kubok-u16-live/api/v1/teams?images=v10");
   const cached = await caches.default.match(key);
   if (cached) return await cached.json();
   const r=await fetch(FHR_TEAMS,{
@@ -471,7 +471,7 @@ function parseRoster(html, team) {
     if(!name)continue;
     const additional=cellText((body.match(/team-player-card__additional["'][^>]*>([\s\S]*?)<\/div>/i)||[])[1]);
     const position=(additional.match(/Вратарь|Защитник|Нападающий/i)||[])[0]||"";
-    const image=(body.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)||[])[1];
+    const image=(body.match(/\bsrc=["'](https:\/\/img\.fhr\.ru\/(?:teams|players)\/[^"']+)["']/i)||[])[1];
     players.push({number, name, position,
       photo:onlyFhrImage(image,"players"),url:url.href,source:"FHR"});
   }
@@ -486,7 +486,7 @@ async function getRoster(teamId){
   const directory=await getTeams();
   const team=directory.teams.find(t=>t.id===Number(teamId));
   if(!team)throw new Error("Team not found in FHR tournament");
-  const key=new Request("https://cache.kubok-u16-live/api/v1/teams/"+teamId);
+  const key=new Request("https://cache.kubok-u16-live/api/v1/teams/"+teamId+"?images=v10");
   const cached=await caches.default.match(key);
   if(cached)return await cached.json();
   const response=await fetch(team.url,{headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}});
