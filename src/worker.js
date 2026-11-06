@@ -57,10 +57,23 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     if (cells.length < 5) continue;
     const texts = cells.map(cellText);
 
-    const dateIndex = texts.findIndex(value => /\d{2}\.\d{2}\.20\d{2}\s+\d{2}:\d{2}/.test(value));
+    const dateIndex = texts.findIndex(value => /\d{2}\.\d{2}\.20\d{2}/.test(value));
     if (dateIndex < 0) continue;
-    const dateMatch = texts[dateIndex].match(/(\d{2})\.(\d{2})\.(20\d{2})\s+(\d{2}):(\d{2})/);
+    const dateMatch = texts[dateIndex].match(/(\d{2})\.(\d{2})\.(20\d{2})(?:\s+(\d{1,2}):(\d{2}))?/);
     if (!dateMatch) continue;
+
+    let timeMsk = dateMatch[4] ? String(dateMatch[4]).padStart(2, "0") + ":" + dateMatch[5] : "";
+    let timeIndex = -1;
+    if (!timeMsk) {
+      for (let i = dateIndex + 1; i < Math.min(cells.length, dateIndex + 4); i++) {
+        const timeMatch = texts[i].match(/^(\d{1,2}):(\d{2})(?:\s*МСК)?$/i);
+        if (timeMatch) {
+          timeMsk = String(timeMatch[1]).padStart(2, "0") + ":" + timeMatch[2];
+          timeIndex = i;
+          break;
+        }
+      }
+    }
 
     const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
     let matchUrl = null;
@@ -75,17 +88,22 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       } catch {}
     }
 
-    const isArena = value => /^(?:ЛА|МАУ|Арена|ледов|дворец)\b/i.test(value) || /(?:ледовая арена|ледовый дворец)/i.test(value);
+    const isArena = value =>
+      /^(?:ЛА|МАУ)(?:\s|$)/i.test(value) ||
+      /(?:арена|ледов|дворец|море спорта|побережье)/i.test(value);
     const isScore = value => /(?:^|\s)\d{1,2}\s*:\s*\d{1,2}(?:\s|$)/.test(value);
     const isStage = value => /^\d+\s*-\s*\d+\s*м\.?$/i.test(value);
-    const arena = texts.find(isArena) || "";
-    const scoreCell = texts.find(isScore) || "";
+    const scoreIndex = texts.findIndex((value, index) => index !== dateIndex && index !== timeIndex && isScore(value));
+    const scoreCell = scoreIndex >= 0 ? texts[scoreIndex] : "";
     const scoreMatch = scoreCell.match(/(?:^|\s)(\d{1,2})\s*:\s*(\d{1,2})(?:\s|$)/);
+    const arena = texts.find((value, index) => index !== dateIndex && index !== timeIndex && isArena(value)) || "";
 
     const numericCells = texts.filter(value => /^\d{1,8}$/.test(value));
     const matchNumber = numericCells.length ? Number(numericCells[0]) : null;
     const teamCandidates = texts.filter((value, index) =>
       index !== dateIndex &&
+      index !== timeIndex &&
+      index !== scoreIndex &&
       value &&
       !/^\d{1,8}$/.test(value) &&
       !isArena(value) &&
@@ -94,7 +112,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       !/\d{2}\.\d{2}\.20\d{2}/.test(value) &&
       !/^(?:№|дата|арена|команда|сч[её]т)$/i.test(value) &&
       !/^\d{1,2}:\d{2}(?:\s|$)/.test(value) &&
-      !/^(?:ОТ|ПБ|ПП|МСК)$/i.test(value)
+      !/^(?:ОТ|ПБ|ПП|МСК|[:–—-]+)$/i.test(value)
     );
 
     const home = teamCandidates[0] || null;
@@ -106,7 +124,6 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const id = gameId || matchNumber;
     if (!id) continue;
     const date = dateMatch[3] + "-" + dateMatch[2] + "-" + dateMatch[1];
-    const timeMsk = dateMatch[4] + ":" + dateMatch[5];
     const fingerprint = gameId ? String(gameId) : [date, timeMsk, home || "", away || ""].join("|");
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
