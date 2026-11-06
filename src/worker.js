@@ -317,7 +317,7 @@ export default {
             let parsedCount = 0, parseError = null;
             try { parsedCount = parseCalendar(body, new Date().toISOString(), filter.name).length; }
             catch (e) { parseError = String(e && e.message || e); }
-            const rowSamples = [...body.matchAll(/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi)]
+            const rowSamples = [...body.matchAll(/<tr\b[^>]*>([\s\\S]*?)<\/tr>/gi)]
               .filter(m => /СПАРТАК|ЛОКОМОТИВ|ТОРПЕДО/.test(cellText(m[1])))
               .slice(0, 2).map(m => getCellHtml(m[1]).map(cellText));
             return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900), rowSamples };
@@ -372,7 +372,7 @@ export default {
         const tabSnippets = ["Календарь", "Группа A-I", "Группа Б-I", "Группа В-I", "Группа Г-I", "Группа A-II", "data-ajax-url", "data-ajax"]
           .map(term => {
             const i = html.toLowerCase().indexOf(term.toLowerCase());
-            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 700), Math.min(html.length, i + 1500)).replace(/\\s+/g, " ").slice(0, 2200) };
+            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 700), Math.min(html.length, i + 1500)).replace(/\s+/g, " ").slice(0, 2200) };
           }).filter(Boolean);
         return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, title: cellText(title), textPreview, links, tabSnippets }, 200, 0);
       } catch (error) {
@@ -403,7 +403,7 @@ export default {
         const snippets = ["Окончен", "Не сыгран", "period-score", "score-wrap", "Матч центр", "Протокол", "гол:", "game-status", "match-status"]
           .map(term => {
             const i = html.toLowerCase().indexOf(term.toLowerCase());
-            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 900)).replace(/\\s+/g, " ").slice(0, 1400) };
+            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 900)).replace(/\s+/g, " ").slice(0, 1400) };
           }).filter(Boolean);
         return json({
           ok: response.ok,
