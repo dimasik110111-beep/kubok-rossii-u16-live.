@@ -1,0 +1,34 @@
+name: Verify all 20 FHR rosters
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/test-all-rosters.yml']
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - run: |
+          python3 - <<'PY'
+          import json,urllib.request,concurrent.futures,time
+          base="https://kubok-u16-live.dimasik110111.workers.dev"
+          def get(path):
+              with urllib.request.urlopen(urllib.request.Request(base+path,headers={"User-Agent":"JUNIOR-U16-v10-roster-audit"}),timeout=50) as r:
+                  return json.load(r)
+          teams=get("/api/v1/teams")["teams"]
+          assert len(teams)==20
+          def check(t):
+              try:
+                  roster=get("/api/v1/teams/"+str(t["id"]))
+                  p=roster.get("players",[])
+                  return (t["fullName"],len(p),sum(bool(x.get("photo")) for x in p),roster.get("ok"),"")
+              except Exception as e:
+                  return (t["fullName"],0,0,False,str(e))
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+              rows=list(pool.map(check,teams))
+          for name,count,images,ok,error in rows:print(f"{name}: players={count}, photo_urls={images}, ok={ok}, error={error}",flush=True)
+          assert all(ok and count>10 for _,count,_,ok,_ in rows),"Missing FHR roster"
+          print("TOTAL VERIFIED PLAYERS",sum(row[1] for row in rows),"TEAMS",len(rows),flush=True)
+          PY
