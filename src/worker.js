@@ -370,177 +370,14 @@ export default {
         ok: true,
         service: "kubok-u16-live",
         source: FHR_CALENDAR,
-        feed: "/api/v1/matches",
+        endpoints: {
+          matches: "/api/v1/matches",
+          live: "/api/v1/live",
+          match: "/api/v1/matches/{gameId}"
+        },
         liveVerified: false,
-        note: "Health check only; live match updates must be validated during an active FHR match."
+        note: "Health check only. Match LIVE status is verified separately through FHR match-center pages."
       });
-    }
-
-    if (url.pathname === "/api/v1/debug/group-feeds") {
-      try {
-        const response = await fetch(FHR_CALENDAR, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" } });
-        const html = await response.text();
-        const filters = [...html.matchAll(/<div\b[^>]*data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi)]
-          .map(m => ({ url: new URL(decodeEntities(m[1]), FHR_CALENDAR).href, name: cellText(m[2]) }))
-          .filter(x => x.name && /группа|плей-офф/i.test(x.name));
-        const feeds = await Promise.all(filters.map(async filter => {
-          try {
-            const r = await fetch(filter.url, {
-              headers: {
-                "accept": "text/html, */*",
-                "user-agent": "KubokRossiiU16Live/1.0",
-                "x-requested-with": "XMLHttpRequest",
-                "referer": FHR_CALENDAR
-              }
-            });
-            const body = await r.text();
-            let parsedCount = 0, parseError = null;
-            try { parsedCount = parseCalendar(body, new Date().toISOString(), filter.name).length; }
-            catch (e) { parseError = String(e && e.message || e); }
-            const rowSamples = [...body.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
-              .filter(m => /СПАРТАК|ЛОКОМОТИВ|ТОРПЕДО/.test(cellText(m[1])))
-              .slice(0, 2).map(m => getCellHtml(m[1]).map(cellText));
-            const sampleIndex = body.indexOf("СПАРТАК");
-            const rowStart = sampleIndex >= 0 ? body.lastIndexOf("<tr", sampleIndex) : -1;
-            const rowEnd = sampleIndex >= 0 ? body.indexOf("</tr>", sampleIndex) : -1;
-            const sampleHtml = /плей-офф/i.test(filter.name) && rowStart >= 0 && rowEnd >= 0 ? body.slice(rowStart, rowEnd + 5) : "";
-            return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900), rowSamples, sampleHtml };
-          } catch (e) {
-            return { name: filter.name, error: String(e && e.message || e) };
-          }
-        }));
-        return json({ ok: true, filtersCount: filters.length, feeds }, 200, 0);
-      } catch (error) {
-        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
-      }
-    }
-
-    if (url.pathname === "/api/v1/debug/calendar") {
-      try {
-        const calendarUrl = FHR_CALENDAR;
-        const response = await fetch(calendarUrl, {
-          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
-          redirect: "follow"
-        });
-        const html = await response.text();
-        const links = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
-          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 120) }))
-          .filter(x => /games\/|calendar|kubokrossii/i.test(x.href) || /группа|этап|2011 г\.р\./i.test(x.text)).slice(0, 150);
-        const filters = [...html.matchAll(/<[^>]+data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/[^>]+>/gi)]
-          .map(m => ({ url: m[1], text: cellText(m[2]).slice(0, 80) })).slice(0, 40);
-        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 12000);
-        const snippets = ["Календарь", "Группа A-I", "Группа Б-I", "Группа В-I", "Группа Г-I", "data-ajax-link"]
-          .map(term => {
-            const i = html.toLowerCase().indexOf(term.toLowerCase());
-            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 1800)).replace(/\s+/g, " ").slice(0, 2200) };
-          }).filter(Boolean);
-        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, filters, links, textPreview, snippets }, 200, 0);
-      } catch (error) {
-        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
-      }
-    }
-
-    if (url.pathname === "/api/v1/debug/tournament") {
-      try {
-        const tournamentUrl = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/";
-        const response = await fetch(tournamentUrl, {
-          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
-          redirect: "follow"
-        });
-        const html = await response.text();
-        const links = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
-          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 140) }))
-          .filter(x => /games\/|calendar|kubokrossii/i.test(x.href) || /2011 г\.р\.|группа|матч/i.test(x.text)).slice(0, 180);
-        const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
-        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 14000);
-        const tabSnippets = ["Календарь", "Группа A-I", "Группа Б-I", "Группа В-I", "Группа Г-I", "Группа A-II", "data-ajax-url", "data-ajax"]
-          .map(term => {
-            const i = html.toLowerCase().indexOf(term.toLowerCase());
-            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 700), Math.min(html.length, i + 1500)).replace(/\s+/g, " ").slice(0, 2200) };
-          }).filter(Boolean);
-        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, title: cellText(title), textPreview, links, tabSnippets }, 200, 0);
-      } catch (error) {
-        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
-      }
-    }
-
-    if (url.pathname === "/api/v1/debug/game") {
-      const gameId = url.searchParams.get("id") || "";
-      if (!/^\d{5,12}$/.test(gameId)) return json({ ok: false, error: "Provide numeric FHR game id" }, 400, 0);
-      try {
-        const gameUrl = "https://junior.fhr.ru/games/" + gameId + "/";
-        const response = await fetch(gameUrl, {
-          headers: { "accept": "text/html,application/xhtml+xml", "user-agent": "KubokRossiiU16Live/1.0" },
-          redirect: "follow"
-        });
-        const html = await response.text();
-        const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
-        const scriptSrcs = [...html.matchAll(/<script[^>]*src=["']([^"']+)["']/gi)].map(m => m[1]).slice(0, 50);
-        const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map(m => m[1])
-          .filter(x => /api|ajax|game|match|stat|protocol|event/i.test(x)).slice(0, 80);
-        const inlineScripts = [...html.matchAll(/<script\b(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/gi)]
-          .map(m => m[1]).filter(x => /game|match|ajax|api|score|period|event/i.test(x))
-          .map(x => x.slice(0, 1800)).slice(0, 12);
-        const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 5000);
-        const markers = [...html.matchAll(/.{0,100}(?:live|period|score|game_id|gameId|match_id|matchId|ajax|api).{0,180}/gi)]
-          .map(m => m[0].replace(/\s+/g, " ").slice(0, 280)).slice(0, 35);
-        const snippets = ["Окончен", "Не сыгран", "period-score", "score-wrap", "Матч центр", "Протокол", "гол:", "game-status", "match-status"]
-          .map(term => {
-            const i = html.toLowerCase().indexOf(term.toLowerCase());
-            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 500), Math.min(html.length, i + 900)).replace(/\s+/g, " ").slice(0, 1400) };
-          }).filter(Boolean);
-        return json({
-          ok: response.ok,
-          httpStatus: response.status,
-          finalUrl: response.url,
-          contentType: response.headers.get("content-type"),
-          htmlLength: html.length,
-          title: cellText(title),
-          textPreview,
-          scriptSrcs,
-          hrefs,
-          inlineScripts,
-          markers,
-          snippets
-        }, 200, 0);
-      } catch (error) {
-        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
-      }
-    }
-
-    if (url.pathname === "/api/v1/debug/source") {
-      try {
-        const [calendarResponse, homeResponse] = await Promise.all([
-          fetch(FHR_CALENDAR, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" }),
-          fetch("https://junior.fhr.ru/", { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" })
-        ]);
-        const [calendarHtml, homeHtml] = await Promise.all([calendarResponse.text(), homeResponse.text()]);
-        const rows = parseCalendar(calendarHtml, new Date().toISOString());
-        const links = [...homeHtml.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
-          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 100) }))
-          .filter(x => /kubokrossii|calendar|games\//i.test(x.href) || /кубок россии u16|матч центр/i.test(x.text))
-          .slice(0, 100);
-        const scripts = [...homeHtml.matchAll(/<script\b[^>]*src=["']([^"']+)["']/gi)].map(m => m[1]).slice(0, 40);
-        const title = (homeHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
-        const dates = rows.map(x => x.date).sort();
-        return json({
-          ok: true,
-          calendarStatus: calendarResponse.status,
-          calendarUrl: calendarResponse.url,
-          calendarCount: rows.length,
-          calendarMinDate: dates[0],
-          calendarMaxDate: dates[dates.length - 1],
-          homeStatus: homeResponse.status,
-          homeUrl: homeResponse.url,
-          homeTitle: cellText(title),
-          homeHtmlLength: homeHtml.length,
-          calendarHtmlLength: calendarHtml.length,
-          links,
-          scripts
-        }, 200, 0);
-      } catch (error) {
-        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
-      }
     }
 
     if (url.pathname === "/api/v1/live") {
@@ -588,6 +425,6 @@ export default {
       }
     }
 
-    return json({ ok: false, error: "Not found", endpoints: ["/health", "/api/v1/matches"] }, 404, 0);
+    return json({ ok: false, error: "Not found", endpoints: ["/health", "/api/v1/matches", "/api/v1/live", "/api/v1/matches/{gameId}"] }, 404, 0);
   }
 };
