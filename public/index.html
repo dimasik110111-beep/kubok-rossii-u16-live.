@@ -155,7 +155,7 @@
       }
       const hasScore=m.homeScore!=null&&m.awayScore!=null;
       const period=(m.periodScores||[]).length ? '<div class="meta">По периодам: '+m.periodScores.map(p=>p.home+":"+p.away).join(" · ")+'</div>' : "";
-      const matchHref=m.matchUrl||("https://junior.fhr.ru/games/"+m.gameId+"/");
+      const matchHref=m.matchUrl||(m.gameId?("https://junior.fhr.ru/games/"+m.gameId+"/"):"https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/");
       html+='<a class="match" href="'+esc(matchHref)+'" target="_blank" rel="noopener">'+
         '<div class="time">'+esc(clockLabel(m.timeMsk))+'<small>МСК · №'+esc(m.matchNumber??"—")+'</small></div>'+
         '<div class="teams">'+
