@@ -92,17 +92,36 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const scoreCell = scoreIndex >= 0 ? texts[scoreIndex] : "";
     const scoreMatch = scoreCell.match(/^(\d{1,2})\s*:\s*(\d{1,2})(?:\s+(ОТ|ПБ|ПП))?$/i);
 
-    const teamCandidates = texts.filter((value, index) => {
+    const teamCandidateIndexes = texts.map((value, index) => ({ value, index })).filter(({ value, index }) => {
       if (!value || index === dateIndex || index === timeIndex || index === scoreIndex || isArena(value)) return false;
-      if (index === numberIndex || /^\d{1,8}$/.test(value)) return false;
-      if (/^\d{1,2}:\d{2}$/.test(value) || /\d{2}\.\d{2}\.20\d{2}/.test(value)) return false;
+      if (index === numberIndex || /^\\d{1,8}$/.test(value)) return false;
+      if (/^\\d{1,2}:\\d{2}$/.test(value) || /\\d{2}\\.\\d{2}\\.20\\d{2}/.test(value)) return false;
       if (/^(?:ОТ|ПБ|ПП|МСК|:|—|-|№|дата|арена|команда|сч[её]т)$/i.test(value)) return false;
-      if (/^\d+\s*-\s*\d+\s*м\.?$/i.test(value)) return false;
+      if (/^\\d+\\s*-\\s*\\d+\\s*м\\.?$/i.test(value)) return false;
       return true;
     });
 
-    const home = teamCandidates[0] || null;
-    const away = teamCandidates[1] || null;
+    const homeCandidate = teamCandidateIndexes[0] || null;
+    const awayCandidate = teamCandidateIndexes[1] || null;
+    const home = homeCandidate ? homeCandidate.value : null;
+    const away = awayCandidate ? awayCandidate.value : null;
+    const getTeamLogo = (cellIndex) => {
+      if (cellIndex == null || !cells[cellIndex]) return null;
+      const imageTag = cells[cellIndex].match(/<img\\b[^>]*>/i);
+      if (!imageTag) return null;
+      const source = imageTag[0].match(/\\b(?:data-src|data-original|src)\\s*=\\s*["']([^"']+)["']/i);
+      if (!source) return null;
+      try {
+        const imageUrl = new URL(decodeEntities(source[1]), FHR_CALENDAR);
+        if (imageUrl.protocol === "https:" && (imageUrl.hostname === "junior.fhr.ru" || imageUrl.hostname.endsWith(".fhr.ru"))) {
+          return imageUrl.href;
+        }
+      } catch {}
+      return null;
+    };
+    const homeLogo = homeCandidate ? getTeamLogo(homeCandidate.index) : null;
+    const awayLogo = awayCandidate ? getTeamLogo(awayCandidate.index) : null;
+
     const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
     let matchUrl = null;
     let gameId = null;
@@ -135,6 +154,8 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       timeMsk,
       home,
       away,
+      homeLogo,
+      awayLogo,
       homeScore: scoreMatch ? Number(scoreMatch[1]) : null,
       awayScore: scoreMatch ? Number(scoreMatch[2]) : null,
       scoreNote: scoreMatch ? (scoreMatch[3] || "") : "",
