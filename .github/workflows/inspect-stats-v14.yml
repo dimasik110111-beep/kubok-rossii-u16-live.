@@ -1,0 +1,40 @@
+name: Inspect official Cup 2026/27 statistics
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-stats-v14.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect FHR tournament stats DOM and links
+        run: |
+          python3 -m pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,re,json
+          from bs4 import BeautifulSoup
+          base='https://junior.fhr.ru'
+          paths=['/tournaments/kubokrossii-25008909/stats/',
+                 '/tournaments/kubokrossii-25008909/stats/players/',
+                 '/tournaments/kubokrossii-25008909/stats/goalkeepers/',
+                 '/tournaments/kubokrossii-25008909/']
+          for path in paths:
+            print('===',path,flush=True)
+            try:
+              req=urllib.request.Request(base+path,headers={'User-Agent':'Mozilla/5.0','Accept':'text/html'})
+              response=urllib.request.urlopen(req,timeout=30)
+              html=response.read().decode('utf-8','ignore')
+              soup=BeautifulSoup(html,'html.parser')
+              print('HTTP',response.status,'LEN',len(html),'TITLE',soup.title.get_text(' ',strip=True)[:140] if soup.title else '',flush=True)
+              links=[(a.get_text(' ',strip=True)[:65],a.get('href')) for a in soup.select('a[href]') if ('stats' in str(a.get('href')) or 'player' in str(a.get('href')) or 'tournament' in str(a.get('href')))]
+              print('LINKS',links[:60],flush=True)
+              for selector in ['.stats','.stats-table','.statistics-table','.stats-player','.player-stats','.statistics','.leaders','.stat-leaders','.stats-list','.statistics__item','.player-card','.leader-card','table','[data-ajax-link]','[data-sort]','form','select','[data-page]']:
+                els=soup.select(selector)
+                print('SEL',selector,len(els),'FIRST',str(els[0])[:1200].replace('\n',' ') if els else '',flush=True)
+              for h in soup.select('h1,h2,h3,h4')[:25]:print('HEADING',h.get_text(' ',strip=True)[:100],flush=True)
+              for key in ['Бомбардиры','Снайперы','Ассистенты','Вратари','stats-tab','stats-player','leader-card','stats-table','Родионов Кирилл','Козлов Алексей']:
+                p=html.find(key)
+                if p>=0:print('NEAR',key,re.sub(r'\s+',' ',html[max(0,p-240):p+1000])[:1180],flush=True)
+            except Exception as e:print('ERROR',str(e),flush=True)
+          PY
