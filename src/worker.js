@@ -181,7 +181,12 @@ export default {
           .filter(x => /games\/|calendar|kubokrossii/i.test(x.href) || /2011 г\.р\.|группа|матч/i.test(x.text)).slice(0, 180);
         const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
         const textPreview = cellText(html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ").replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")).slice(0, 14000);
-        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, title: cellText(title), textPreview, links }, 200, 0);
+        const tabSnippets = ["Календарь", "Группа A-I", "Группа Б-I", "Группа В-I", "Группа Г-I", "Группа A-II", "data-ajax-url", "data-ajax"]
+          .map(term => {
+            const i = html.toLowerCase().indexOf(term.toLowerCase());
+            return i < 0 ? null : { term, html: html.slice(Math.max(0, i - 700), Math.min(html.length, i + 1500)).replace(/\\s+/g, " ").slice(0, 2200) };
+          }).filter(Boolean);
+        return json({ ok: response.ok, httpStatus: response.status, finalUrl: response.url, htmlLength: html.length, title: cellText(title), textPreview, links, tabSnippets }, 200, 0);
       } catch (error) {
         return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
       }
