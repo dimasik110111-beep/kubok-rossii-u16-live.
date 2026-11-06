@@ -315,9 +315,12 @@ export default {
             });
             const body = await r.text();
             let parsedCount = 0, parseError = null;
-            try { parsedCount = parseCalendar(body, new Date().toISOString()).length; }
+            try { parsedCount = parseCalendar(body, new Date().toISOString(), filter.name).length; }
             catch (e) { parseError = String(e && e.message || e); }
-            return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900) };
+            const rowSamples = [...body.matchAll(/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi)]
+              .filter(m => /СПАРТАК|ЛОКОМОТИВ|ТОРПЕДО/.test(cellText(m[1])))
+              .slice(0, 2).map(m => getCellHtml(m[1]).map(cellText));
+            return { name: filter.name, status: r.status, contentType: r.headers.get("content-type"), length: body.length, parsedCount, parseError, preview: cellText(body).slice(0, 900), rowSamples };
           } catch (e) {
             return { name: filter.name, error: String(e && e.message || e) };
           }
