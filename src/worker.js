@@ -220,12 +220,12 @@ export default {
         ]);
         const [calendarHtml, homeHtml] = await Promise.all([calendarResponse.text(), homeResponse.text()]);
         const rows = parseCalendar(calendarHtml, new Date().toISOString());
-        const links = [...homeHtml.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\\S]*?)<\/a>/gi)]
+        const links = [...homeHtml.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
           .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 100) }))
           .filter(x => /kubokrossii|calendar|games\//i.test(x.href) || /кубок россии u16|матч центр/i.test(x.text))
           .slice(0, 100);
         const scripts = [...homeHtml.matchAll(/<script\b[^>]*src=["']([^"']+)["']/gi)].map(m => m[1]).slice(0, 40);
-        const title = (homeHtml.match(/<title[^>]*>([\s\\S]*?)<\/title>/i) || [,""])[1];
+        const title = (homeHtml.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [,""])[1];
         const dates = rows.map(x => x.date).sort();
         return json({
           ok: true,
