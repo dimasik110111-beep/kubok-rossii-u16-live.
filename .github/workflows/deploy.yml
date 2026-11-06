@@ -26,3 +26,7 @@ jobs:
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -e '.ok and .groupsFetched == 10 and (.matches | length) >= 85 and (.groupErrors | length) == 0' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq -e '.ok and .status == "FINAL" and (.periodScores | length) >= 3' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq -e '.ok and (.checkedCount | type) == "number" and (.matches | type) == "array"' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/25170469 | jq -e '.ok and
+            ([.timeline[] | select(.type == "GOAL")] | length) == 3 and
+            ([.timeline[] | select(.type == "PENALTY")] | length) >= 5 and
+            ([.timeline[] | select(.type == "GOALKEEPER")] | length) >= 1' >/dev/null
