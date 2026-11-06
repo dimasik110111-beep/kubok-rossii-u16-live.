@@ -177,7 +177,10 @@ function parseProtocolTimeline(html) {
     const top=fhrElementText(center,"protocol-time__top");
     const bottom=fhrElementText(center,"protocol-time__bottom");
     const time=(bottom.match(/\b\d{1,3}:\d{2}\b/)||[])[0]||"";
-    const scoreMatch=top.match(/(\d+)\s*[-:]\s*(\d+)/);
+    // FHR goal blocks have the plain "match-protocol" class; scores are nested in center spans.
+    // Only seek a goal score in those blocks, never confuse a penalty timestamp with the score.
+    const scoreMatch=/match-protocol--/.test(m[0])?null:
+      (top+" "+cellText(center)).match(/\b(\d+)\s*-\s*(\d+)\b/);
     const entryClass=m[0];
     const type=/match-protocol--penalty/.test(entryClass)?"PENALTY":
       /match-protocol--keepers/.test(entryClass)?"GOALKEEPER":
