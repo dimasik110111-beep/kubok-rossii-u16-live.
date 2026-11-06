@@ -446,6 +446,35 @@ export default {
       }
     }
 
+    const matchRoute = url.pathname.match(/^\/api\/v1\/matches\/(\d+)\/?$/);
+    if (matchRoute) {
+      const gameId = matchRoute[1];
+      try {
+        const matchUrl = "https://junior.fhr.ru/games/" + gameId + "/";
+        const response = await fetch(matchUrl, {
+          headers: {
+            "accept": "text/html,application/xhtml+xml",
+            "user-agent": "KubokRossiiU16Live/1.0 (+FHR match-center reader)"
+          },
+          redirect: "follow"
+        });
+        if (!response.ok) throw new Error("FHR match page returned HTTP " + response.status);
+        const contentType = response.headers.get("content-type") || "";
+        if (contentType && !contentType.includes("text/html")) throw new Error("Unexpected FHR match content type");
+        const html = await response.text();
+        const data = parseMatchPage(html, gameId, new Date().toISOString());
+        return json(data, 200, 3);
+      } catch (error) {
+        return json({
+          ok: false,
+          gameId: Number(gameId),
+          error: "FHR match detail fetch/parse failed",
+          detail: String(error && error.message || error).slice(0, 220),
+          fetchedAt: new Date().toISOString()
+        }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/matches") {
       try {
         return json(await getCalendar(), 200, 10);
