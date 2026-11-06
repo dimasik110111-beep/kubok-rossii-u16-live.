@@ -1,0 +1,37 @@
+name: Inspect v14 full FHR player statistics AJAX
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-v14-full-stats.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.parse,urllib.request,re
+          from bs4 import BeautifulSoup
+          base='https://junior.fhr.ru'
+          page=base+'/tournaments/kubokrossii-25008909/stats/'
+          h=urllib.request.urlopen(urllib.request.Request(page,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read()
+          s=BeautifulSoup(h,'html.parser')
+          for metric in ['BOMBARDIRS','SNIPERS','ASSISTANTS','PLUS_MINUS','SHTRAFS','GOALKEEPER','GOALKEEPER_KN']:
+            e=s.select_one('a[data-ajax-link*="stats='+metric+'"]')
+            if e is None:
+              print('MISSING LINK',metric,flush=True);continue
+            u=urllib.parse.urljoin(page,e.get('data-ajax-link'))
+            print('FETCH',metric,u[:150],flush=True)
+            try:
+              req=urllib.request.Request(u,headers={'User-Agent':'Mozilla/5.0','X-Requested-With':'XMLHttpRequest','Referer':page})
+              r=urllib.request.urlopen(req,timeout=35)
+              raw=r.read().decode('utf-8','ignore')
+              doc=BeautifulSoup(raw,'html.parser')
+              print('RESPONSE',metric,'HTTP',r.status,'BYTES',len(raw),'TABLES',len(doc.select('table')),'TR',len(doc.select('tr')),'PLAYER_CARDS',len(doc.select('.general-stat__player')),'LOADED_TEXT',doc.get_text(' ',strip=True)[:600],flush=True)
+              for sel in ['table','thead','tr','tbody','.table','.stats','.stat-item','.stats-row','.player','.stats-tbl','.general-stat__player','.pagination','[data-ajax-link]']:
+                el=doc.select(sel)
+                if el:print('ELEMENT',metric,sel,len(el),str(el[0])[:2100].replace('\n',' '),flush=True)
+              print('RAWSTART',metric,re.sub(r'\s+',' ',raw[:1500]),flush=True)
+            except Exception as e:print('ERROR',metric,repr(e),flush=True)
+          PY
