@@ -369,6 +369,135 @@ async function getCalendar() {
   return payload;
 }
 
+
+const FHR_TEAMS = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/teams/";
+const TOURNAMENT_ICON = "https://img.fhr.ru/tournaments/b6/ef/25008909.webp";
+
+function onlyFhrImage(src, category) {
+  try {
+    const url = new URL(decodeEntities(src), "https://junior.fhr.ru/");
+    return url.protocol === "https:" && url.hostname === "img.fhr.ru" &&
+      new RegExp("^/" + category + "/[a-z0-9]+/[a-z0-9]+/\\d+\\.webp$", "i").test(url.pathname)
+      ? url.href : null;
+  } catch { return null; }
+}
+
+function parseTeamsMarkup(html, stage) {
+  const entries = [];
+  const seen = new Set();
+  const pattern = /<a\b([^>]*\bclass=["'][^"']*\bteam-link\b[^"']*["'][^>]*)>([\s\S]*?)<\/a>/gi;
+  for (const result of html.matchAll(pattern)) {
+    const attributes=result[1], body=result[2];
+    const href=(attributes.match(/\bhref=["']([^"']+)["']/i)||[])[1];
+    if (!href) continue;
+    let url;
+    try { url = new URL(decodeEntities(href),FHR_TEAMS); } catch { continue; }
+    if (url.origin !== "https://junior.fhr.ru") continue;
+    const m=url.pathname.match(/^\/tournaments\/kubokrossii-25008909\/[a-z0-9-]+_(\d+)\/$/);
+    if (!m) continue;
+    const teamId=Number(m[1]);
+    if (seen.has(teamId)) continue;
+    seen.add(teamId);
+    const title=(body.match(/<span\b[^>]*class=["'][^"']*\bteam-title\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)||[])[1];
+    const city=(body.match(/<span\b[^>]*class=["'][^"']*\bteam-city\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i)||[])[1];
+    const name=cellText(title)||cellText(body);
+    if (!name) continue;
+    const image=(body.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)||[])[1];
+    entries.push({
+      id:teamId, name, city:cellText(city), fullName:[name,cellText(city)].filter(Boolean).join(" "),
+      logo:onlyFhrImage(image,"teams"),
+      url:url.href, stage, source:"FHR"
+    });
+  }
+  return entries;
+}
+
+async function getTeams() {
+  const key = new Request("https://cache.kubok-u16-live/api/v1/teams");
+  const cached = await caches.default.match(key);
+  if (cached) return await cached.json();
+  const r=await fetch(FHR_TEAMS,{
+    headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}
+  });
+  if (!r.ok) throw new Error("FHR teams HTTP "+r.status);
+  const html=await r.text();
+  const filters=[...html.matchAll(/<div\b[^>]*data-ajax-link=["']([^"']+)["'][^>]*>([\s\S]*?)<\/div>/gi)]
+    .map(m=>({url:new URL(decodeEntities(m[1]),FHR_TEAMS).href,stage:cellText(m[2])}))
+    .filter(x=>/^группа\s+.{1,3}-(I|II|III)$/i.test(x.stage));
+  const firstStage=filters.filter(f=>/-I$/i.test(f.stage));
+  const chosen=firstStage.length>=4?firstStage:filters;
+  const batches=await Promise.all(chosen.map(async f=>{
+    try{
+      const u=new URL(f.url);
+      if(u.hostname!=="junior.fhr.ru"||u.protocol!=="https:")throw new Error("Unexpected FHR host");
+      const res=await fetch(u.href,{headers:{
+        "accept":"text/html,*/*",
+        "x-requested-with":"XMLHttpRequest",
+        "referer":FHR_TEAMS
+      }});
+      if(!res.ok)throw new Error("FHR teams group HTTP "+res.status);
+      return {stage:f.stage,teams:parseTeamsMarkup(await res.text(),f.stage),error:null};
+    }catch(e){return {stage:f.stage,teams:[],error:String(e&&e.message||e).slice(0,120)};}
+  }));
+  const map=new Map();
+  for(const item of parseTeamsMarkup(html,"Группа A-I"))map.set(item.id,item);
+  for(const group of batches)for(const team of group.teams)map.set(team.id,team);
+  const teams=[...map.values()].sort((a,b)=>a.name.localeCompare(b.name,"ru"));
+  if(!teams.length)throw new Error("No teams parsed from FHR");
+  const payload={
+    ok:true, source:"FHR",sourceUrl:FHR_TEAMS,tournamentLogo:TOURNAMENT_ICON,
+    fetchedAt:new Date().toISOString(),count:teams.length,
+    complete:teams.length>=20 && !batches.some(x=>x.error),
+    groups:batches.map(x=>({name:x.stage,count:x.teams.length,error:x.error})),
+    teams
+  };
+  await caches.default.put(key,new Response(JSON.stringify(payload),{
+    headers:{"content-type":"application/json","cache-control":"public,max-age=900"}}));
+  return payload;
+}
+
+function parseRoster(html, team) {
+  const players=[],seen=new Set();
+  const cards=html.matchAll(/<a\b([^>]*\bclass=["'][^"']*\bteam-player-card\b[^"']*["'][^>]*)>([\s\S]*?)<\/a>/gi);
+  for(const match of cards) {
+    const a=match[1], body=match[2];
+    const link=(a.match(/href=["']([^"']+)["']/i)||[])[1];
+    const url=new URL(decodeEntities(link||"/"),"https://junior.fhr.ru/");
+    if(url.origin!=="https://junior.fhr.ru" || !/^\/player\/[a-z0-9-]+\/$/.test(url.pathname))continue;
+    if(seen.has(url.pathname))continue;
+    seen.add(url.pathname);
+    const number=cellText((body.match(/team-player-card__number["'][^>]*>([\s\S]*?)<\/span>/i)||[])[1]);
+    const name=cellText((body.match(/team-player-card__name["'][^>]*>([\s\S]*?)<\/div>/i)||[])[1]);
+    if(!name)continue;
+    const additional=cellText((body.match(/team-player-card__additional["'][^>]*>([\s\S]*?)<\/div>/i)||[])[1]);
+    const position=(additional.match(/Вратарь|Защитник|Нападающий/i)||[])[0]||"";
+    const image=(body.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i)||[])[1];
+    players.push({number, name, position,
+      photo:onlyFhrImage(image,"players"),url:url.href,source:"FHR"});
+  }
+  return {
+    ok:true,source:"FHR",sourceUrl:team.url,fetchedAt:new Date().toISOString(),
+    team,playersCount:players.length,players,
+    complete:players.length>0
+  };
+}
+
+async function getRoster(teamId){
+  const directory=await getTeams();
+  const team=directory.teams.find(t=>t.id===Number(teamId));
+  if(!team)throw new Error("Team not found in FHR tournament");
+  const key=new Request("https://cache.kubok-u16-live/api/v1/teams/"+teamId);
+  const cached=await caches.default.match(key);
+  if(cached)return await cached.json();
+  const response=await fetch(team.url,{headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}});
+  if(!response.ok)throw new Error("FHR roster HTTP "+response.status);
+  const payload=parseRoster(await response.text(),team);
+  if(!payload.playersCount)throw new Error("FHR roster returned no players");
+  await caches.default.put(key,new Response(JSON.stringify(payload),{
+    headers:{"content-type":"application/json","cache-control":"public,max-age=600"}}));
+  return payload;
+}
+
 export default {
   async fetch(request) {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -383,11 +512,21 @@ export default {
         endpoints: {
           matches: "/api/v1/matches",
           live: "/api/v1/live",
-          match: "/api/v1/matches/{gameId}"
+          match: "/api/v1/matches/{gameId}", teams: "/api/v1/teams", roster:"/api/v1/teams/{teamId}"
         },
         liveVerified: false,
         note: "Health check only. Match LIVE status is verified separately through FHR match-center pages."
       });
+    }
+
+    if(url.pathname==="/api/v1/teams"){
+      try{return json(await getTeams(),200,90);}
+      catch(error){return json({ok:false,error:"FHR team directory failed",detail:String(error&&error.message||error).slice(0,200)},502,0);}
+    }
+    const rosterRoute=url.pathname.match(/^\/api\/v1\/teams\/(\d+)\/?$/);
+    if(rosterRoute){
+      try{return json(await getRoster(Number(rosterRoute[1])),200,90);}
+      catch(error){return json({ok:false,error:"FHR roster failed",detail:String(error&&error.message||error).slice(0,200)},502,0);}
     }
 
     if (url.pathname === "/api/v1/live") {
