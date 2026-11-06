@@ -92,7 +92,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const scoreCell = scoreIndex >= 0 ? texts[scoreIndex] : "";
     const scoreMatch = scoreCell.match(/^(\d{1,2})\s*:\s*(\d{1,2})(?:\s+(ОТ|ПБ|ПП))?$/i);
 
-    const teamCandidateIndexes = texts.map((value, index) => ({ value, index })).filter(({ value, index }) => {
+    const teamCandidates = texts.filter((value, index) => {
       if (!value || index === dateIndex || index === timeIndex || index === scoreIndex || isArena(value)) return false;
       if (index === numberIndex || /^\d{1,8}$/.test(value)) return false;
       if (/^\d{1,2}:\d{2}$/.test(value) || /\d{2}\.\d{2}\.20\d{2}/.test(value)) return false;
@@ -101,27 +101,8 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       return true;
     });
 
-    const homeCandidate = teamCandidateIndexes[0] || null;
-    const awayCandidate = teamCandidateIndexes[1] || null;
-    const home = homeCandidate ? homeCandidate.value : null;
-    const away = awayCandidate ? awayCandidate.value : null;
-    const getTeamLogo = (cellIndex) => {
-      if (cellIndex == null || !cells[cellIndex]) return null;
-      const imageTag = cells[cellIndex].match(/<img\b[^>]*>/i);
-      if (!imageTag) return null;
-      const source = imageTag[0].match(/\b(?:data-src|data-original|src)\s*=\s*["']([^"']+)["']/i);
-      if (!source) return null;
-      try {
-        const imageUrl = new URL(decodeEntities(source[1]), FHR_CALENDAR);
-        if (imageUrl.protocol === "https:" && (imageUrl.hostname === "junior.fhr.ru" || imageUrl.hostname.endsWith(".fhr.ru"))) {
-          return imageUrl.href;
-        }
-      } catch {}
-      return null;
-    };
-    const homeLogo = homeCandidate ? getTeamLogo(homeCandidate.index) : null;
-    const awayLogo = awayCandidate ? getTeamLogo(awayCandidate.index) : null;
-
+    const home = teamCandidates[0] || null;
+    const away = teamCandidates[1] || null;
     const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
     let matchUrl = null;
     let gameId = null;
@@ -154,8 +135,6 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       timeMsk,
       home,
       away,
-      homeLogo,
-      awayLogo,
       homeScore: scoreMatch ? Number(scoreMatch[1]) : null,
       awayScore: scoreMatch ? Number(scoreMatch[2]) : null,
       scoreNote: scoreMatch ? (scoreMatch[3] || "") : "",
@@ -396,18 +375,6 @@ export default {
     if (request.method !== "GET") return json({ ok: false, error: "GET only" }, 405, 0);
 
     const url = new URL(request.url);
-    if (url.pathname === "/api/v1/debug/team-assets") {
-      try {
-        const response = await fetch("https://junior.fhr.ru/tournaments/kubokrossii-25008909/teams/", { headers: { "accept": "text/html", "user-agent": "KubokU16LogoCheck/1.0" } });
-        const html = await response.text();
-        const cards = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
-          .map(m => ({ href: m[1], text: cellText(m[2]), imgTags: [...m[2].matchAll(/<img\b[^>]*>/gi)].map(x => x[0].slice(0, 360)) }))
-          .filter(x => x.href.includes("/tournaments/kubokrossii-25008909/") && x.href.includes("_") && x.imgTags.length)
-          .slice(0, 30);
-        return json({ ok: response.ok, status: response.status, count: cards.length, cards }, 200, 0);
-      } catch (error) { return json({ ok: false, error: String(error) }, 502, 0); }
-    }
-
     if (url.pathname === "/health") {
       return json({
         ok: true,
