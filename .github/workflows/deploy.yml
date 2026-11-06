@@ -29,4 +29,4 @@ jobs:
           curl -sS 'https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/game?id=26349466' | jq '{ok, httpStatus, finalUrl, contentType, htmlLength, title, textPreview, snippets}'
           curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/tournament | jq '{ok, httpStatus, finalUrl, htmlLength, title, textPreview, links, tabSnippets}'
           curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/calendar | jq '{ok, httpStatus, finalUrl, htmlLength, filters, links, textPreview, snippets}'
-          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/group-feeds | jq '{ok, filtersCount, feeds}'
+          curl -sS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/group-feeds | jq '{ok, filtersCount, feeds: [.feeds[] | {name, parsedCount, parseError, rowSamples}]}'
