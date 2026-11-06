@@ -396,6 +396,18 @@ export default {
     if (request.method !== "GET") return json({ ok: false, error: "GET only" }, 405, 0);
 
     const url = new URL(request.url);
+    if (url.pathname === "/api/v1/debug/team-assets") {
+      try {
+        const response = await fetch("https://junior.fhr.ru/tournaments/kubokrossii-25008909/teams/", { headers: { "accept": "text/html", "user-agent": "KubokU16LogoCheck/1.0" } });
+        const html = await response.text();
+        const cards = [...html.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+          .map(m => ({ href: m[1], text: cellText(m[2]), imgTags: [...m[2].matchAll(/<img\b[^>]*>/gi)].map(x => x[0].slice(0, 360)) }))
+          .filter(x => x.href.includes("/tournaments/kubokrossii-25008909/") && x.href.includes("_") && x.imgTags.length)
+          .slice(0, 30);
+        return json({ ok: response.ok, status: response.status, count: cards.length, cards }, 200, 0);
+      } catch (error) { return json({ ok: false, error: String(error) }, 502, 0); }
+    }
+
     if (url.pathname === "/health") {
       return json({
         ok: true,
