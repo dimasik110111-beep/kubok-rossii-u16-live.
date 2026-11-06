@@ -27,6 +27,8 @@ jobs:
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/health | jq -e '.ok and .endpoints.live == "/api/v1/live"' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -e '.ok and .groupsFetched == 10 and (.matches | length) >= 85 and (.groupErrors | length) == 0' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/debug/team-assets | jq -c '.cards[]'
+          echo "Official FHR team logo map:"
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -r '[.matches[] | [{name:.home,logo:.homeLogo},{name:.away,logo:.awayLogo}][] | select(.name != null and .logo != null)] | unique_by(.name) | .[] | [.name,.logo] | @tsv'
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -e '[.matches[] | select(.homeLogo != null and .awayLogo != null)] | length > 0' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq -e '.ok and .status == "FINAL" and (.periodScores | length) >= 3' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq -e '.ok and (.checkedCount | type) == "number" and (.matches | type) == "array"' >/dev/null
