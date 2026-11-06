@@ -94,10 +94,10 @@ function parseCalendar(html, fetchedAt, groupName = "") {
 
     const teamCandidateIndexes = texts.map((value, index) => ({ value, index })).filter(({ value, index }) => {
       if (!value || index === dateIndex || index === timeIndex || index === scoreIndex || isArena(value)) return false;
-      if (index === numberIndex || /^\\d{1,8}$/.test(value)) return false;
-      if (/^\\d{1,2}:\\d{2}$/.test(value) || /\\d{2}\\.\\d{2}\\.20\\d{2}/.test(value)) return false;
+      if (index === numberIndex || /^\d{1,8}$/.test(value)) return false;
+      if (/^\d{1,2}:\d{2}$/.test(value) || /\d{2}\.\d{2}\.20\d{2}/.test(value)) return false;
       if (/^(?:ОТ|ПБ|ПП|МСК|:|—|-|№|дата|арена|команда|сч[её]т)$/i.test(value)) return false;
-      if (/^\\d+\\s*-\\s*\\d+\\s*м\\.?$/i.test(value)) return false;
+      if (/^\d+\s*-\s*\d+\s*м\.?$/i.test(value)) return false;
       return true;
     });
 
@@ -107,9 +107,9 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const away = awayCandidate ? awayCandidate.value : null;
     const getTeamLogo = (cellIndex) => {
       if (cellIndex == null || !cells[cellIndex]) return null;
-      const imageTag = cells[cellIndex].match(/<img\\b[^>]*>/i);
+      const imageTag = cells[cellIndex].match(/<img\b[^>]*>/i);
       if (!imageTag) return null;
-      const source = imageTag[0].match(/\\b(?:data-src|data-original|src)\\s*=\\s*["']([^"']+)["']/i);
+      const source = imageTag[0].match(/\b(?:data-src|data-original|src)\s*=\s*["']([^"']+)["']/i);
       if (!source) return null;
       try {
         const imageUrl = new URL(decodeEntities(source[1]), FHR_CALENDAR);
@@ -156,7 +156,7 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       away,
       homeLogo,
       awayLogo,
-      rowImageTags: [...rowHtml.matchAll(/<(?:img|svg|source)\\b[^>]*>/gi)].map(m => m[0].slice(0, 320)),
+      rowImageTags: [...rowHtml.matchAll(/<(?:img|svg|source)\b[^>]*>/gi)].map(m => m[0].slice(0, 320)),
       homeScore: scoreMatch ? Number(scoreMatch[1]) : null,
       awayScore: scoreMatch ? Number(scoreMatch[2]) : null,
       scoreNote: scoreMatch ? (scoreMatch[3] || "") : "",
