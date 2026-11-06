@@ -42,7 +42,7 @@ function getCellHtml(row) {
   return [...row.matchAll(/<t[dh]\b[^>]*>([\s\S]*?)<\/t[dh]>/gi)].map(m => m[1]);
 }
 
-function parseCalendar(html, fetchedAt) {
+function parseCalendar(html, fetchedAt, groupName = "") {
   if (typeof html !== "string" || html.length < 500 || html.length > 5_000_000) {
     throw new Error("FHR calendar response has an unexpected size");
   }
@@ -59,43 +59,56 @@ function parseCalendar(html, fetchedAt) {
     const numberText = cellText(cells[0]);
     if (!/^\d{1,8}$/.test(numberText)) continue;
 
-    const dateText = cellText(cells[1]);
+    const dateIndex = cells.findIndex(cell => /\d{2}\.\d{2}\.20\d{2}\s+\d{2}:\d{2}/.test(cellText(cell)));
+    if (dateIndex < 0) continue;
+    const dateText = cellText(cells[dateIndex]);
     const dateMatch = dateText.match(/(\d{2})\.(\d{2})\.(20\d{2})\s+(\d{2}):(\d{2})/);
     if (!dateMatch) continue;
 
-    const home = cellText(cells[2]);
-    const away = cellText(cells[3]);
-    const scoreCell = cellText(cells[4]);
-    const arena = cells[5] ? cellText(cells[5]) : "";
-    if (!home || !away || home === away) continue;
+    let homeIndex = dateIndex + 1;
+    let awayIndex = dateIndex + 2;
+    let scoreIndex = dateIndex + 3;
+    let arenaIndex = dateIndex + 4;
+
+    const nextCell = cellText(cells[dateIndex + 1] || "");
+    if (/(?:^|\s)(?:ЛА|МАУ|Арена|ледов|дворец)/i.test(nextCell)) {
+      arenaIndex = dateIndex + 1;
+      homeIndex = dateIndex + 2;
+      awayIndex = dateIndex + 3;
+      scoreIndex = dateIndex + 4;
+    }
+
+    const home = cellText(cells[homeIndex] || "");
+    const away = cellText(cells[awayIndex] || "");
+    const scoreCell = cellText(cells[scoreIndex] || "");
+    const arena = cellText(cells[arenaIndex] || "");
+    if (!home || !away || home === away || /^\d{1,2}$/.test(home) || /^\d{1,2}$/.test(away)) continue;
 
     const scoreMatch = scoreCell.match(/(?:^|\s)(\d{1,2})\s*:\s*(\d{1,2})(?:\s|$)/);
-    const rowAttrs = (rowMatch[0].match(/^<tr\b[^>]*>/i) || [""])[0];
-    const explicitLive = /\bLIVE\b|ид[её]т\s+(?:матч|игра)|data-status=["']live["']/i.test(rowHtml + " " + rowAttrs);
-    const explicitFinal = /заверш[её]н|окончен|\bFINAL\b|data-status=["']finished["']/i.test(rowHtml + " " + rowAttrs);
+    const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
+    let matchUrl = null;
+    let gameId = null;
+    if (hrefMatch) {
+      try {
+        const candidate = new URL(decodeEntities(hrefMatch[1]), FHR_CALENDAR);
+        if (candidate.protocol === "https:" && candidate.hostname === "junior.fhr.ru" && /^\/games\/\d+\/?$/.test(candidate.pathname)) {
+          matchUrl = candidate.href;
+          gameId = Number(candidate.pathname.match(/\d+/)[0]);
+        }
+      } catch {}
+    }
 
-    let status = "SCHEDULED";
-    if (explicitLive) status = "LIVE";
-    else if (explicitFinal) status = "FINAL";
-    else if (scoreMatch) status = "SCORE_AVAILABLE";
-
-    const id = Number(numberText);
+    const id = gameId || Number(numberText);
     const fingerprint = [id, dateText, home, away].join("|");
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
 
-    const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
-    let matchUrl = null;
-    if (hrefMatch) {
-      try {
-        const candidate = new URL(decodeEntities(hrefMatch[1]), FHR_CALENDAR);
-        if (candidate.protocol === "https:" && candidate.hostname === "junior.fhr.ru") matchUrl = candidate.href;
-      } catch {}
-    }
-
     const date = dateMatch[3] + "-" + dateMatch[2] + "-" + dateMatch[1];
     matches.push({
       id,
+      gameId,
+      matchNumber: Number(numberText),
+      group: groupName || null,
       date,
       timeMsk: dateMatch[4] + ":" + dateMatch[5],
       home,
@@ -104,19 +117,62 @@ function parseCalendar(html, fetchedAt) {
       awayScore: scoreMatch ? Number(scoreMatch[2]) : null,
       scoreNote: scoreMatch ? scoreCell.replace(scoreMatch[0], "").trim() : "",
       arena,
-      status,
+      status: scoreMatch ? "SCORE_AVAILABLE" : "SCHEDULED",
       matchUrl,
       source: "FHR",
       observedAt: fetchedAt
     });
   }
 
-  if (!matches.length) {
-    throw new Error("No calendar rows matched the expected FHR table. Parser needs review.");
-  }
-
-  matches.sort((a, b) => (a.date + a.timeMsk).localeCompare(b.date + b.timeMsk));
   return matches;
+}
+
+function parseMatchPage(html, gameId, fetchedAt) {
+  const matchNumberText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-number\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
+  const statusText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-result\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
+  const dateText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-date\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
+  const teams = [...html.matchAll(/<span\b[^>]*class=["'][^"']*\bteam-title\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/gi)]
+    .map(m => cellText(m[1])).filter(Boolean);
+  const scoreIndex = html.indexOf('class="match-score"');
+  const scoreChunk = scoreIndex >= 0 ? html.slice(scoreIndex, scoreIndex + 700) : "";
+  const scoreNumbers = [...scoreChunk.matchAll(/class=["']text-score["']>(\d+)</gi)].map(m => Number(m[1])).slice(0, 2);
+  const periodScores = [...html.matchAll(/<div\b[^>]*class=["'][^"']*\bperiod-score\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)]
+    .map(m => [...m[1].matchAll(/class=["']text-score["']>(\d+)</gi)].map(x => Number(x[1])))
+    .filter(x => x.length >= 2).map(x => ({ home: x[0], away: x[1] }));
+  const eventRows = [...html.matchAll(/<div\b[^>]*class=["'][^"']*\bevent-row\b[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi)]
+    .map(m => {
+      const score = (m[1].match(/<div\b[^>]*class=["'][^"']*\bscore-col\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || [,""])[1];
+      const info = (m[1].match(/<div\b[^>]*class=["'][^"']*\binfo-col\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i) || [,""])[1];
+      return { score: cellText(score), description: cellText(info) };
+    }).filter(x => x.score || x.description);
+
+  const statusLabel = cellText(statusText);
+  let status = "UNKNOWN";
+  if (/не начался|не сыгран|ожидает/i.test(statusLabel)) status = "SCHEDULED";
+  else if (/окончен|заверш[её]н|финал/i.test(statusLabel)) status = "FINAL";
+  else if (/перерыв/i.test(statusLabel)) status = "LIVE_PAUSED";
+  else if (/период|овертайм|буллит|ид[её]т|live/i.test(statusLabel)) status = "LIVE";
+
+  return {
+    ok: true,
+    gameId: Number(gameId),
+    matchNumber: Number((cellText(matchNumberText).match(/\d+/) || [])[0]) || null,
+    tournament: "Кубок России U16",
+    season: "2026/2027",
+    home: teams[0] || null,
+    away: teams[1] || null,
+    homeScore: scoreNumbers.length === 2 ? scoreNumbers[0] : null,
+    awayScore: scoreNumbers.length === 2 ? scoreNumbers[1] : null,
+    periodScores,
+    status,
+    statusText: statusLabel || null,
+    dateText: cellText(dateText) || null,
+    events: eventRows,
+    matchUrl: "https://junior.fhr.ru/games/" + gameId + "/",
+    source: "FHR",
+    observedAt: fetchedAt,
+    liveVerified: status === "LIVE" || status === "LIVE_PAUSED"
+  };
 }
 
 async function getCalendar() {
