@@ -168,6 +168,41 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/v1/debug/source") {
+      try {
+        const [calendarResponse, homeResponse] = await Promise.all([
+          fetch(FHR_CALENDAR, { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" }),
+          fetch("https://junior.fhr.ru/", { headers: { "accept": "text/html", "user-agent": "KubokRossiiU16Live/1.0" }, redirect: "follow" })
+        ]);
+        const [calendarHtml, homeHtml] = await Promise.all([calendarResponse.text(), homeResponse.text()]);
+        const rows = parseCalendar(calendarHtml, new Date().toISOString());
+        const links = [...homeHtml.matchAll(/<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi)]
+          .map(m => ({ href: m[1], text: cellText(m[2]).slice(0, 100) }))
+          .filter(x => /kubokrossii|calendar|games\\//i.test(x.href) || /кубок россии u16|матч центр/i.test(x.text))
+          .slice(0, 100);
+        const scripts = [...homeHtml.matchAll(/<script\\b[^>]*src=["']([^"']+)["']/gi)].map(m => m[1]).slice(0, 40);
+        const title = (homeHtml.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i) || [,""])[1];
+        const dates = rows.map(x => x.date).sort();
+        return json({
+          ok: true,
+          calendarStatus: calendarResponse.status,
+          calendarUrl: calendarResponse.url,
+          calendarCount: rows.length,
+          calendarMinDate: dates[0],
+          calendarMaxDate: dates[dates.length - 1],
+          homeStatus: homeResponse.status,
+          homeUrl: homeResponse.url,
+          homeTitle: cellText(title),
+          homeHtmlLength: homeHtml.length,
+          calendarHtmlLength: calendarHtml.length,
+          links,
+          scripts
+        }, 200, 0);
+      } catch (error) {
+        return json({ ok: false, error: String(error && error.message || error) }, 502, 0);
+      }
+    }
+
     if (url.pathname === "/api/v1/matches") {
       try {
         return json(await getCalendar(), 200, 10);
