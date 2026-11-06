@@ -223,6 +223,10 @@ async function fetchMatchDetail(gameId) {
 }
 
 async function getLiveMatches() {
+  const cacheKey = new Request("https://cache.kubok-u16-live/api/v1/live");
+  const cached = await caches.default.match(cacheKey);
+  if (cached) return await cached.json();
+
   const calendar = await getCalendar();
   const now = Date.now();
   const mskNow = new Date(now + 3 * 60 * 60 * 1000);
@@ -244,7 +248,7 @@ async function getLiveMatches() {
   }));
   const liveMatches = results.filter(match => match.ok !== false && (match.status === "LIVE" || match.status === "LIVE_PAUSED"));
   const errors = results.filter(match => match.ok === false);
-  return {
+  const payload = {
     ok: true,
     tournament: calendar.tournament,
     season: calendar.season,
@@ -262,6 +266,12 @@ async function getLiveMatches() {
         ? "Сейчас нет матчей в окне проверки; LIVE не подтверждён, повторите запрос перед началом игры."
         : (liveMatches.length ? "LIVE-статус проверен по карточкам матчей ФХР." : "Карточки матчей ФХР проверены: сейчас подтверждённых LIVE-матчей нет."))
   };
+
+  const cacheResponse = new Response(JSON.stringify(payload), {
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=10" }
+  });
+  await caches.default.put(cacheKey, cacheResponse);
+  return payload;
 }
 
 async function getCalendar() {
@@ -353,7 +363,7 @@ async function getCalendar() {
   };
 
   const cacheResponse = new Response(JSON.stringify(payload), {
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=12" }
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" }
   });
   await caches.default.put(cacheKey, cacheResponse);
   return payload;
