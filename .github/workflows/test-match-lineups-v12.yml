@@ -1,0 +1,35 @@
+name: Verify v12 official match lineups and box scores
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/test-match-lineups-v12.yml']
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Assert FHR match-specific rosters and stats from two real fixtures
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request
+          base='https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/'
+          for mid in [25170469,26350481]:
+              request=urllib.request.Request(base+str(mid),headers={'User-Agent':'JUNIOR-U16-v12-CI','Cache-Control':'no-cache'})
+              with urllib.request.urlopen(request,timeout=45) as response: data=json.load(response)
+              group=data.get('matchLineups') or {}
+              teams=group.get('teams') or []
+              print('MATCH',mid,'LINEUPS',group.get('available'),'SIDES',len(teams),'COUNTS',[(x.get('side'),x.get('playerCount'),len(x.get('staff',[]))) for x in teams],flush=True)
+              for team in teams:
+                  print(' SAMPLE',[(p.get('number'),p.get('name'),p.get('position'),p.get('captainRole'),p.get('stats')) for p in team.get('players',[])[:4]],flush=True)
+              assert group.get('available') is True, 'Match-specific lineups unavailable'
+              assert len(teams)==2 and teams[0].get('side')=='home' and teams[1].get('side')=='away'
+              assert all(len(t.get('players',[]))>=15 for t in teams),'Missing actual match roster players'
+              assert all(all(p.get('name') and p.get('number') and p.get('photo') and p.get('url') for p in t['players']) for t in teams)
+              assert all(any(p.get('position')=='GOALIE' for p in t['players']) for t in teams)
+              assert all(len(t.get('staff',[]))>=1 for t in teams),'Missing coaches'
+              assert any(p.get('captainRole')=='C' for t in teams for p in t['players']),'No captain found'
+              assert any(p.get('stats') and p['stats'].get('goals') is not None for t in teams for p in t['players']),'Missing match box score statistics'
+              if mid==25170469:
+                  home=teams[0]['players']
+                  assert sum((p.get('stats') or {}).get('goals') or 0 for p in home)==3,'FHR home goals mismatch'
+          PY
