@@ -236,6 +236,78 @@ function parseProtocolTimeline(html) {
   return timeline;
 }
 
+
+function fhrSafeProfileUrl(chunk) {
+  const link=(String(chunk||"").match(/<a\b[^>]*\bhref=["']([^"']+\/player\/[^"']+|\/player\/[^"']+)["']/i)||[])[1]
+    || (String(chunk||"").match(/\bhref=["'](\/player\/[^"']+)["']/i)||[])[1];
+  if (!link) return null;
+  try {
+    const url=new URL(decodeEntities(link),"https://junior.fhr.ru");
+    return url.origin==="https://junior.fhr.ru"&&url.pathname.startsWith("/player/")?url.href:null;
+  } catch { return null; }
+}
+
+function fhrInt(value) {
+  const text=cellText(value).replace(/\s+/g,"");
+  return /^\d{1,3}$/.test(text)?Number(text):null;
+}
+
+function parseFhrMatchLineups(html) {
+  const start=html.search(/<div\b[^>]*\bclass=["'][^"']*\bmatch-team-tab\b[^"']*["'][^>]*>/i);
+  if (start<0) return {available:false, source:"FHR_MATCH", teams:[]};
+  const tail=html.slice(start,start+350000);
+  const nextTab=tail.search(/<div\b[^>]*\bclass=["'][^"']*\bmatch-protocol-tab\b[^"']*["'][^>]*>/i);
+  const tab=nextTab>0?tail.slice(0,nextTab):tail;
+  const blockPattern=/<div\b[^>]*\bclass=["'][^"']*\bteam-block\s+(left-team|right-team)\b[^"']*["'][^>]*>/gi;
+  const blocks=[...tab.matchAll(blockPattern)];
+  const teams=[];
+  for (let i=0;i<blocks.length&&i<2;i++) {
+    const block=blocks[i],side=block[1]==="left-team"?"home":"away";
+    const slice=tab.slice(block.index,i+1<blocks.length?blocks[i+1].index:tab.length);
+    const table=(slice.match(/<table\b[^>]*\bclass=["'][^"']*\bteam-table\b[^"']*["'][^>]*>([\s\S]*?)<\/table>/i)||[])[1]||"";
+    const logo=fhrOfficialPortrait(table.slice(0,3000),"teams");
+    const players=[],staff=[],seen=new Set();
+    for(const tbody of table.matchAll(/<tbody\b[^>]*\bdata-id=["']([1-4])["'][^>]*>([\s\S]*?)<\/tbody>/gi)){
+      const role={1:"GOALIE",2:"DEFENDER",3:"FORWARD",4:"STAFF"}[Number(tbody[1])];
+      if(!role)continue;
+      for(const row of tbody[2].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)){
+        const cells=[...row[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map(m=>m[1]);
+        if(!cells.length)continue;
+        const playerCell=cells[0];
+        const name=fhrElementText(playerCell,"text").trim();
+        const number=fhrElementText(playerCell,"number");
+        if(!name||name.length>100)continue;
+        if(role==="STAFF"){
+          staff.push({name,position:cellText(cells[cells.length-1]).slice(0,100),
+            photo:fhrOfficialPortrait(playerCell,"personals"),source:"FHR_MATCH"});
+          continue;
+        }
+        const url=fhrSafeProfileUrl(playerCell);
+        const playerKey=url||role+"|"+number+"|"+name;
+        if(seen.has(playerKey))continue;
+        seen.add(playerKey);
+        const rawCaptain=cells.length>1?fhrElementText(cells[1],"captain-mark"):"";
+        const roleMark=rawCaptain==="К"?"C":rawCaptain==="А"?"A":null;
+        const stats=role==="GOALIE"?null:{
+          goals:fhrInt(cells[2]),assists:fhrInt(cells[3]),points:fhrInt(cells[4]),penaltyMinutes:fhrInt(cells[5])
+        };
+        players.push({
+          name,number,position:role,
+          assignment:fhrElementText(playerCell,"unit")||null,
+          captainRole:roleMark,photo:fhrOfficialPortrait(playerCell,"players"),
+          url,stats,source:"FHR_MATCH"
+        });
+      }
+    }
+    teams.push({side,logo,players,staff,playerCount:players.length,
+      verified:players.length>=10,
+      source:"FHR_MATCH"});
+  }
+  return {available:teams.length===2&&teams.every(t=>t.verified),
+    partial:teams.length>0 && !teams.every(t=>t.verified),
+    source:"FHR_MATCH", teams};
+}
+
 function parseMatchPage(html, gameId, fetchedAt) {
   const matchNumberText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-number\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
   const statusText = (html.match(/<span\b[^>]*class=["'][^"']*\bmatch-result\b[^"']*["'][^>]*>([\s\S]*?)<\/span>/i) || [,""])[1];
@@ -289,6 +361,7 @@ function parseMatchPage(html, gameId, fetchedAt) {
     events: eventRows,
     timeline: parseProtocolTimeline(html),
     protocolSource: "FHR match center",
+    matchLineups: parseFhrMatchLineups(html),
     matchUrl: "https://junior.fhr.ru/games/" + gameId + "/",
     source: "FHR",
     observedAt: fetchedAt,
