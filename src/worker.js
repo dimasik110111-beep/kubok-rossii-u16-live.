@@ -55,46 +55,13 @@ function parseCalendar(html, fetchedAt, groupName = "") {
     const rowHtml = rowMatch[1];
     const cells = getCellHtml(rowHtml);
     if (cells.length < 5) continue;
+    const texts = cells.map(cellText);
 
-    const numberText = cellText(cells[0]);
-    if (!/^\d{1,8}$/.test(numberText)) continue;
-
-    const dateIndex = cells.findIndex(cell => /\d{2}\.\d{2}\.20\d{2}/.test(cellText(cell)));
+    const dateIndex = texts.findIndex(value => /\d{2}\.\d{2}\.20\d{2}\s+\d{2}:\d{2}/.test(value));
     if (dateIndex < 0) continue;
-    let dateText = cellText(cells[dateIndex]);
-    let dateMatch = dateText.match(/(\d{2})\.(\d{2})\.(20\d{2})(?:\s+(\d{2}):(\d{2}))?/);
+    const dateMatch = texts[dateIndex].match(/(\d{2})\.(\d{2})\.(20\d{2})\s+(\d{2}):(\d{2})/);
     if (!dateMatch) continue;
 
-    let nextIndex = dateIndex + 1;
-    let timeMsk = dateMatch[4] ? dateMatch[4] + ":" + dateMatch[5] : "";
-    if (!timeMsk && cells[nextIndex] && /^\d{1,2}:\d{2}(?:\s|$)/.test(cellText(cells[nextIndex]))) {
-      timeMsk = cellText(cells[nextIndex]).match(/(\d{1,2}:\d{2})/)[1];
-      nextIndex += 1;
-    }
-
-    const arenaIndex = cells.findIndex((cell, index) =>
-      index >= nextIndex && /(?:ЛА\b|МАУ\b|Арена|ледов|дворец|спортивн)/i.test(cellText(cell))
-    );
-    const scoreIndex = cells.findIndex((cell, index) =>
-      index >= nextIndex && /(?:^|\s)\d{1,2}\s*:\s*\d{1,2}(?:\s|$)/.test(cellText(cell))
-    );
-
-    const teamIndexes = [];
-    for (let i = nextIndex; i < cells.length; i++) {
-      if (i === arenaIndex || i === scoreIndex) continue;
-      const value = cellText(cells[i]);
-      if (!value || /^\d{1,2}:\d{2}$/.test(value) || /^\d{2}\.\d{2}\.20\d{2}/.test(value)) continue;
-      if (/^(?:ОТ|ПБ|ПП|МСК)$/i.test(value)) continue;
-      teamIndexes.push(i);
-    }
-
-    const home = teamIndexes.length >= 2 ? cellText(cells[teamIndexes[0]]) : "";
-    const away = teamIndexes.length >= 2 ? cellText(cells[teamIndexes[1]]) : "";
-    const scoreCell = scoreIndex >= 0 ? cellText(cells[scoreIndex]) : "";
-    const arena = arenaIndex >= 0 ? cellText(cells[arenaIndex]) : "";
-    if (!home || !away || home === away || /^\d{1,2}$/.test(home) || /^\d{1,2}$/.test(away)) continue;
-
-    const scoreMatch = scoreCell.match(/(?:^|\s)(\d{1,2})\s*:\s*(\d{1,2})(?:\s|$)/);
     const hrefMatch = rowHtml.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/i);
     let matchUrl = null;
     let gameId = null;
@@ -108,16 +75,46 @@ function parseCalendar(html, fetchedAt, groupName = "") {
       } catch {}
     }
 
-    const id = gameId || Number(numberText);
-    const fingerprint = [id, dateText, home, away].join("|");
+    const isArena = value => /^(?:ЛА|МАУ|Арена|ледов|дворец)\b/i.test(value) || /(?:ледовая арена|ледовый дворец)/i.test(value);
+    const isScore = value => /(?:^|\s)\d{1,2}\s*:\s*\d{1,2}(?:\s|$)/.test(value);
+    const isStage = value => /^\d+\s*-\s*\d+\s*м\.?$/i.test(value);
+    const arena = texts.find(isArena) || "";
+    const scoreCell = texts.find(isScore) || "";
+    const scoreMatch = scoreCell.match(/(?:^|\s)(\d{1,2})\s*:\s*(\d{1,2})(?:\s|$)/);
+
+    const numericCells = texts.filter(value => /^\d{1,8}$/.test(value));
+    const matchNumber = numericCells.length ? Number(numericCells[0]) : null;
+    const teamCandidates = texts.filter((value, index) =>
+      index !== dateIndex &&
+      value &&
+      !/^\d{1,8}$/.test(value) &&
+      !isArena(value) &&
+      !isScore(value) &&
+      !isStage(value) &&
+      !/\d{2}\.\d{2}\.20\d{2}/.test(value) &&
+      !/^(?:№|дата|арена|команда|сч[её]т)$/i.test(value) &&
+      !/^\d{1,2}:\d{2}(?:\s|$)/.test(value) &&
+      !/^(?:ОТ|ПБ|ПП|МСК)$/i.test(value)
+    );
+
+    const home = teamCandidates[0] || null;
+    const away = teamCandidates[1] || null;
+    // FHR can publish a playoff slot before the participants are decided.
+    if ((!home || !away) && !gameId) continue;
+    if (home && away && home === away) continue;
+
+    const id = gameId || matchNumber;
+    if (!id) continue;
+    const date = dateMatch[3] + "-" + dateMatch[2] + "-" + dateMatch[1];
+    const timeMsk = dateMatch[4] + ":" + dateMatch[5];
+    const fingerprint = gameId ? String(gameId) : [date, timeMsk, home || "", away || ""].join("|");
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
 
-    const date = dateMatch[3] + "-" + dateMatch[2] + "-" + dateMatch[1];
     matches.push({
       id,
       gameId,
-      matchNumber: Number(numberText),
+      matchNumber,
       group: groupName || null,
       date,
       timeMsk,
@@ -146,7 +143,12 @@ function parseMatchPage(html, gameId, fetchedAt) {
   const scoreIndex = html.indexOf('class="match-score"');
   const scoreChunk = scoreIndex >= 0 ? html.slice(scoreIndex, scoreIndex + 700) : "";
   const scoreNumbers = [...scoreChunk.matchAll(/class=["']text-score["']>(\d+)</gi)].map(m => Number(m[1])).slice(0, 2);
-  const periodScores = [...html.matchAll(/<div\b[^>]*class=["'][^"']*\bperiod-score\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)]
+  const deskStart = html.search(/<div\b[^>]*class=["'][^"']*\btime-score-desk\b[^"']*["'][^>]*>/i);
+  const mobileStart = html.search(/<div\b[^>]*class=["'][^"']*\btime-score-mob\b[^"']*["'][^"']*["'][^>]*>/i);
+  const periodHtml = deskStart >= 0
+    ? html.slice(deskStart, mobileStart > deskStart ? mobileStart : deskStart + 7000)
+    : html;
+  const periodScores = [...periodHtml.matchAll(/<div\b[^>]*class=["'][^"']*\bperiod-score\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/gi)]
     .map(m => [...m[1].matchAll(/class=["']text-score["']>(\d+)</gi)].map(x => Number(x[1])))
     .filter(x => x.length >= 2).map(x => ({ home: x[0], away: x[1] }));
   const eventRows = [...html.matchAll(/<div\b[^>]*class=["'][^"']*\bevent-row\b[^"']*["'][^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi)]
@@ -171,9 +173,11 @@ function parseMatchPage(html, gameId, fetchedAt) {
     season: "2026/2027",
     home: teams[0] || null,
     away: teams[1] || null,
-    homeScore: scoreNumbers.length === 2 ? scoreNumbers[0] : null,
-    awayScore: scoreNumbers.length === 2 ? scoreNumbers[1] : null,
-    periodScores,
+    homeScore: status === "SCHEDULED" ? null : (scoreNumbers.length === 2 ? scoreNumbers[0] : null),
+    awayScore: status === "SCHEDULED" ? null : (scoreNumbers.length === 2 ? scoreNumbers[1] : null),
+    periodScores: status === "SCHEDULED" ? [] : periodScores,
+    period: (statusLabel.match(/(\d+)\s*(?:период|периода|period)/i) || [])[1] ? Number((statusLabel.match(/(\d+)\s*(?:период|периода|period)/i) || [])[1]) : null,
+    clock: (statusLabel.match(/\b\d{1,2}:\d{2}\b/) || [])[0] || null,
     status,
     statusText: statusLabel || null,
     dateText: cellText(dateText) || null,
@@ -182,6 +186,61 @@ function parseMatchPage(html, gameId, fetchedAt) {
     source: "FHR",
     observedAt: fetchedAt,
     liveVerified: status === "LIVE" || status === "LIVE_PAUSED"
+  };
+}
+
+async function fetchMatchDetail(gameId) {
+  const matchUrl = "https://junior.fhr.ru/games/" + gameId + "/";
+  const response = await fetch(matchUrl, {
+    headers: {
+      "accept": "text/html,application/xhtml+xml",
+      "user-agent": "KubokRossiiU16Live/1.0 (+FHR match-center reader)"
+    },
+    redirect: "follow"
+  });
+  if (!response.ok) throw new Error("FHR match page returned HTTP " + response.status);
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType && !contentType.includes("text/html")) throw new Error("Unexpected FHR match content type");
+  return parseMatchPage(await response.text(), gameId, new Date().toISOString());
+}
+
+async function getLiveMatches() {
+  const calendar = await getCalendar();
+  const now = Date.now();
+  const mskNow = new Date(now + 3 * 60 * 60 * 1000);
+  const today = mskNow.toISOString().slice(0, 10);
+  const yesterday = new Date(mskNow.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const candidates = calendar.matches.filter(match => {
+    if (!match.gameId || (match.date !== today && match.date !== yesterday)) return false;
+    const start = Date.parse(match.date + "T" + match.timeMsk + ":00+03:00");
+    const age = now - start;
+    return age >= -3 * 60 * 60 * 1000 && age <= 8 * 60 * 60 * 1000;
+  }).slice(0, 24);
+
+  const results = await Promise.all(candidates.map(async match => {
+    try {
+      return await fetchMatchDetail(match.gameId);
+    } catch (error) {
+      return { ok: false, gameId: match.gameId, error: String(error && error.message || error).slice(0, 180) };
+    }
+  }));
+  const liveMatches = results.filter(match => match.ok !== false && (match.status === "LIVE" || match.status === "LIVE_PAUSED"));
+  const errors = results.filter(match => match.ok === false);
+  return {
+    ok: true,
+    tournament: calendar.tournament,
+    season: calendar.season,
+    sourceUrl: FHR_CALENDAR,
+    fetchedAt: new Date().toISOString(),
+    refreshHintSeconds: 10,
+    liveVerified: errors.length === 0,
+    checkedCount: results.length,
+    errors,
+    matches: liveMatches,
+    checkedMatches: results,
+    notice: errors.length
+      ? "Часть карточек ФХР не удалось проверить; LIVE-статус не считается полностью подтверждённым."
+      : (liveMatches.length ? "LIVE-статус проверен по карточкам матчей ФХР." : "Карточки матчей ФХР проверены: сейчас подтверждённых LIVE-матчей нет.")
   };
 }
 
@@ -265,6 +324,7 @@ async function getCalendar() {
     fetchedAt,
     refreshHintSeconds: 15,
     groupsFetched: feedResults.filter(x => !x.error).length,
+    groups: feedResults.map(x => ({ name: x.group, matchesCount: x.matches.length, error: x.error || null })),
     groupErrors: feedResults.filter(x => x.error).map(x => ({ group: x.group, error: x.error })),
     matchesCount: matches.length,
     liveVerified: false,
@@ -463,23 +523,25 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/v1/live") {
+      try {
+        return json(await getLiveMatches(), 200, 5);
+      } catch (error) {
+        return json({
+          ok: false,
+          error: "FHR live check failed",
+          detail: String(error && error.message || error).slice(0, 220),
+          fetchedAt: new Date().toISOString(),
+          liveVerified: false
+        }, 502, 0);
+      }
+    }
+
     const matchRoute = url.pathname.match(/^\/api\/v1\/matches\/(\d+)\/?$/);
     if (matchRoute) {
       const gameId = matchRoute[1];
       try {
-        const matchUrl = "https://junior.fhr.ru/games/" + gameId + "/";
-        const response = await fetch(matchUrl, {
-          headers: {
-            "accept": "text/html,application/xhtml+xml",
-            "user-agent": "KubokRossiiU16Live/1.0 (+FHR match-center reader)"
-          },
-          redirect: "follow"
-        });
-        if (!response.ok) throw new Error("FHR match page returned HTTP " + response.status);
-        const contentType = response.headers.get("content-type") || "";
-        if (contentType && !contentType.includes("text/html")) throw new Error("Unexpected FHR match content type");
-        const html = await response.text();
-        const data = parseMatchPage(html, gameId, new Date().toISOString());
+        const data = await fetchMatchDetail(gameId);
         return json(data, 200, 3);
       } catch (error) {
         return json({
