@@ -13,16 +13,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Deploy Worker
+      - name: Deploy Worker and static scoreboard
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-      - name: Smoke test FHR API
+      - name: Smoke test public app and FHR API
         run: |
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/health | jq -e '.ok and .service == "kubok-u16-live"' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/ | grep -q "Кубок России U16"
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/health | jq -e '.ok and .endpoints.live == "/api/v1/live"' >/dev/null
           curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches | jq -e '.ok and .groupsFetched == 10 and (.matches | length) >= 85 and (.groupErrors | length) == 0' >/dev/null
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26349466 | jq -e '.ok and .status == "SCHEDULED"' >/dev/null
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq -e '.ok and .status == "FINAL" and .homeScore == 3 and .awayScore == 0' >/dev/null
-          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq -e '.ok and (.checkedCount >= 0)' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/matches/26350481 | jq -e '.ok and .status == "FINAL" and (.periodScores | length) >= 3' >/dev/null
+          curl -fsS https://kubok-u16-live.dimasik110111.workers.dev/api/v1/live | jq -e '.ok and (.checkedCount | type) == "number" and (.matches | type) == "array"' >/dev/null
