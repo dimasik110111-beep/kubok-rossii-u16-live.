@@ -1,0 +1,37 @@
+name: Inspect FHR match roster row structure
+on:
+  workflow_dispatch:
+  push:
+    paths: ['.github/workflows/inspect-match-rows.yml']
+permissions: {contents: read}
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          python3 -m pip -q install beautifulsoup4
+          python3 - <<'PY'
+          import urllib.request,re
+          from bs4 import BeautifulSoup
+          gid=25170469
+          url=f'https://junior.fhr.ru/games/{gid}/'
+          soup=BeautifulSoup(urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read(),'html.parser')
+          tab=soup.select_one('.match-team-tab')
+          if not tab:raise Exception('missing match-team-tab')
+          for block in tab.select('.team-block'):
+            print('BLOCK',block.get('class'),'TABLES',len(block.select('table')),'PLAYERS',len(block.select('div.cell.player')),flush=True)
+            print('TABLE_HEADERS',[[t.get_text(' ',strip=True) for t in table.select('thead tr th')] for table in block.select('table')][:3],flush=True)
+            for table in block.select('table')[:2]:
+              for th in table.select('thead')[:4]:
+                print('ROLE',th.get_text(' ',strip=True)[:150],flush=True)
+              for tbody in table.select('tbody')[:4]:
+                print('TBODY',tbody.get('data-id'),'ROWS',len(tbody.select('tr')),flush=True)
+                for row in tbody.select('tr')[:2]:
+                  print('ROW',row.get_text(' ',strip=True)[:300],flush=True)
+                  print(' ROW_HTML',str(row)[:3800].replace('\n',' '),flush=True)
+            for elem in block.select('.staff,.coach,.personnel,.team-staff')[:8]:
+              print('STAFF',str(elem)[:1100],flush=True)
+            print('BLOCK_END',flush=True)
+          print('COACHNEAR',[(t.get_text(' ',strip=True)[:120],t.get('class')) for t in tab.find_all(string=re.compile('Главный тренер|Персонал'))[:8]],flush=True)
+          print('TEAM_BLOCKS',len(tab.select('.team-block')),flush=True)
+          PY
