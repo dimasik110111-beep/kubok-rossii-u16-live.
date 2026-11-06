@@ -95,7 +95,8 @@
         periodScores: d.periodScores || [],
         period: d.period || null,
         clock: d.clock || null,
-        statusText: d.statusText || null
+        statusText: d.statusText || null,
+        events: d.events || []
       };
     });
   }
@@ -157,13 +158,15 @@
       }
       const hasScore=m.homeScore!=null&&m.awayScore!=null;
       const period=(m.periodScores||[]).length ? '<div class="meta">По периодам: '+m.periodScores.map(p=>p.home+":"+p.away).join(" · ")+'</div>' : "";
+      const liveMeta=(m.status==="LIVE"||m.status==="LIVE_PAUSED") ? '<div class="meta">'+esc([m.period?("Период "+m.period):"",m.clock||"",m.statusText||""].filter(Boolean).join(" · "))+'</div>' : "";
+      const events=(m.events||[]).slice(-3).map(e=>'<div class="meta">'+esc([e.score,e.description].filter(Boolean).join(" · "))+'</div>').join("");
       const matchHref=m.matchUrl||(m.gameId?("https://junior.fhr.ru/games/"+m.gameId+"/"):"https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/");
       html+='<a class="match" href="'+esc(matchHref)+'" target="_blank" rel="noopener">'+
         '<div class="time">'+esc(clockLabel(m.timeMsk))+'<small>МСК · №'+esc(m.matchNumber??"—")+'</small></div>'+
         '<div class="teams">'+
           '<div class="team"><span class="team-name">'+esc(m.home||"Участник уточняется")+'</span><span class="team-score">'+esc(score(m.homeScore,m.status))+'</span></div>'+
           '<div class="team"><span class="team-name">'+esc(m.away||"Участник уточняется")+'</span><span class="team-score">'+esc(score(m.awayScore,m.status))+'</span></div>'+
-          '<div class="meta">'+esc(m.group||"Кубок России U16")+(m.arena?" · "+esc(m.arena):"")+'</div>'+period+
+          '<div class="meta">'+esc(m.group||"Кубок России U16")+(m.arena?" · "+esc(m.arena):"")+'</div>'+period+liveMeta+events+
         '</div>'+
         '<div class="right">'+badge(m.status)+(m.statusText?'<span class="source">'+esc(m.statusText)+'</span>':hasScore&&m.status==="SCORE_AVAILABLE"?'<span class="source">Данные календаря ФХР</span>':'<span class="source">ФХР</span>')+'</div>'+
       '</a>';
