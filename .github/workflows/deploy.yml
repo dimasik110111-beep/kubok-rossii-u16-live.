@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+      - name: Test upstream deadlines and partial responses
+        run: node --test test/worker.test.mjs
       - name: Deploy Worker and static scoreboard
         uses: cloudflare/wrangler-action@v4
         with:
