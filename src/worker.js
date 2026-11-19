@@ -1,4 +1,43 @@
 const FHR_CALENDAR = "https://junior.fhr.ru/tournaments/kubokrossii-25008909/calendar/";
+const FHR_TIMEOUT_MS = 6000;
+
+// Bound both response headers and the body. A timeout around fetch() alone
+// leaves response.text()/json() hanging when the upstream stops streaming.
+export async function fetchFhr(url, options = {}, timeoutMs = FHR_TIMEOUT_MS) {
+  const controller = new AbortController();
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const error = new Error("FHR request timed out after " + timeoutMs + " ms");
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([
+      (async () => {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        const body = await response.arrayBuffer();
+        return new Response(body, {
+          status: response.status, statusText: response.statusText,
+          headers: response.headers
+        });
+      })(),
+      deadline
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readCache(key) {
+  try { return await caches.default.match(key); } catch { return null; }
+}
+async function writeCache(key, response) {
+  // Successful upstream data remains useful even if edge storage is full.
+  try { await caches.default.put(key, response); } catch {}
+}
+
 const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, OPTIONS",
@@ -371,7 +410,7 @@ function parseMatchPage(html, gameId, fetchedAt) {
 
 async function fetchMatchDetail(gameId) {
   const matchUrl = "https://junior.fhr.ru/games/" + gameId + "/";
-  const response = await fetch(matchUrl, {
+  const response = await fetchFhr(matchUrl, {
     headers: {
       "accept": "text/html,application/xhtml+xml",
       "user-agent": "KubokRossiiU16Live/1.0 (+FHR match-center reader)"
@@ -381,12 +420,16 @@ async function fetchMatchDetail(gameId) {
   if (!response.ok) throw new Error("FHR match page returned HTTP " + response.status);
   const contentType = response.headers.get("content-type") || "";
   if (contentType && !contentType.includes("text/html")) throw new Error("Unexpected FHR match content type");
-  return parseMatchPage(await response.text(), gameId, new Date().toISOString());
+  const data = parseMatchPage(await response.text(), gameId, new Date().toISOString());
+  if (!data.home || !data.away || data.home === data.away) {
+    throw new Error("FHR match page did not contain both teams");
+  }
+  return data;
 }
 
 async function getLiveMatches() {
   const cacheKey = new Request("https://cache.kubok-u16-live/api/v1/live");
-  const cached = await caches.default.match(cacheKey);
+  const cached = await readCache(cacheKey);
   if (cached) return await cached.json();
 
   const calendar = await getCalendar();
@@ -432,17 +475,17 @@ async function getLiveMatches() {
   const cacheResponse = new Response(JSON.stringify(payload), {
     headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=10" }
   });
-  await caches.default.put(cacheKey, cacheResponse);
+  await writeCache(cacheKey, cacheResponse);
   return payload;
 }
 
 async function getCalendar() {
   const cacheKey = new Request("https://cache.kubok-u16-live/api/v1/matches");
-  const cached = await caches.default.match(cacheKey);
+  const cached = await readCache(cacheKey);
   if (cached) return await cached.json();
 
   const fetchedAt = new Date().toISOString();
-  const response = await fetch(FHR_CALENDAR, {
+  const response = await fetchFhr(FHR_CALENDAR, {
     headers: {
       "accept": "text/html,application/xhtml+xml",
       "user-agent": "KubokRossiiU16Live/1.0 (+FHR public calendar reader)"
@@ -476,6 +519,9 @@ async function getCalendar() {
       fetchedAt,
       refreshHintSeconds: 15,
       groupsFetched: 1,
+      groups: [{ name: "Основной календарь", matchesCount: fallbackMatches.length,
+        error: "ФХР не вернула каталог групп; показана доступная часть календаря" }],
+      partial: true,
       matches: fallbackMatches,
       liveVerified: false,
       notice: "Календарь получен с ФХР. Для LIVE-статуса запрашивайте карточку матча отдельно."
@@ -484,7 +530,7 @@ async function getCalendar() {
 
   const feedResults = await Promise.all(filters.map(async filter => {
     try {
-      const feedResponse = await fetch(filter.url, {
+      const feedResponse = await fetchFhr(filter.url, {
         headers: {
           "accept": "text/html, */*",
           "user-agent": "KubokRossiiU16Live/1.0 (+FHR public calendar reader)",
@@ -532,16 +578,18 @@ async function getCalendar() {
     groupsFetched: feedResults.filter(x => !x.error).length,
     groups: feedResults.map(x => ({ name: x.group, matchesCount: x.matches.length, error: x.error || null })),
     groupErrors: feedResults.filter(x => x.error).map(x => ({ group: x.group, error: x.error })),
+    partial: feedResults.some(x => x.error || x.matches.length === 0),
     matchesCount: matches.length,
     liveVerified: false,
     matches,
     notice: "Динамический каталог ФХР: все опубликованные группы, туры, стыковки и финалы; неопубликованные игры не создаются. Для LIVE используйте карточки матчей."
   };
 
+  const partial = payload.partial;
   const cacheResponse = new Response(JSON.stringify(payload), {
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=60" }
+    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=" + (partial ? 5 : 60) }
   });
-  await caches.default.put(cacheKey, cacheResponse);
+  await writeCache(cacheKey, cacheResponse);
   return payload;
 }
 
@@ -590,9 +638,9 @@ function parseTeamsMarkup(html, stage) {
 
 async function getTeams() {
   const key = new Request("https://cache.kubok-u16-live/api/v1/teams?images=v10");
-  const cached = await caches.default.match(key);
+  const cached = await readCache(key);
   if (cached) return await cached.json();
-  const r=await fetch(FHR_TEAMS,{
+  const r=await fetchFhr(FHR_TEAMS,{
     headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}
   });
   if (!r.ok) throw new Error("FHR teams HTTP "+r.status);
@@ -606,7 +654,7 @@ async function getTeams() {
     try{
       const u=new URL(f.url);
       if(u.hostname!=="junior.fhr.ru"||u.protocol!=="https:")throw new Error("Unexpected FHR host");
-      const res=await fetch(u.href,{headers:{
+      const res=await fetchFhr(u.href,{headers:{
         "accept":"text/html,*/*",
         "x-requested-with":"XMLHttpRequest",
         "referer":FHR_TEAMS
@@ -627,8 +675,8 @@ async function getTeams() {
     groups:batches.map(x=>({name:x.stage,count:x.teams.length,error:x.error})),
     teams
   };
-  await caches.default.put(key,new Response(JSON.stringify(payload),{
-    headers:{"content-type":"application/json","cache-control":"public,max-age=900"}}));
+  await writeCache(key,new Response(JSON.stringify(payload),{
+    headers:{"content-type":"application/json","cache-control":"public,max-age="+(payload.complete?900:5)}}));
   return payload;
 }
 
@@ -663,13 +711,13 @@ async function getRoster(teamId){
   const team=directory.teams.find(t=>t.id===Number(teamId));
   if(!team)throw new Error("Team not found in FHR tournament");
   const key=new Request("https://cache.kubok-u16-live/api/v1/teams/"+teamId+"?images=v10");
-  const cached=await caches.default.match(key);
+  const cached=await readCache(key);
   if(cached)return await cached.json();
-  const response=await fetch(team.url,{headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}});
+  const response=await fetchFhr(team.url,{headers:{"accept":"text/html","user-agent":"KubokRossiiU16Live/1.1"}});
   if(!response.ok)throw new Error("FHR roster HTTP "+response.status);
   const payload=parseRoster(await response.text(),team);
   if(!payload.playersCount)throw new Error("FHR roster returned no players");
-  await caches.default.put(key,new Response(JSON.stringify(payload),{
+  await writeCache(key,new Response(JSON.stringify(payload),{
     headers:{"content-type":"application/json","cache-control":"public,max-age=600"}}));
   return payload;
 }
@@ -768,9 +816,9 @@ function discoverStatsGroups(html){
 async function getStats(queryGroup){
   const requested=String(queryGroup||"").trim().slice(0,95);
   const key=new Request("https://cache.kubok-u16-live/api/v1/stats?group="+encodeURIComponent(requested));
-  const cached=await caches.default.match(key);
+  const cached=await readCache(key);
   if(cached)return await cached.json();
-  const page=await fetch(STATS_SOURCE,{headers:{
+  const page=await fetchFhr(STATS_SOURCE,{headers:{
     "accept":"text/html","user-agent":"JuniorU16-FHRStats/1.0"
   }});
   if(!page.ok)throw new Error("FHR stats page HTTP "+page.status);
@@ -785,7 +833,7 @@ async function getStats(queryGroup){
       key,comp:STATS_TOURNAMENT_ID,year:STATS_YEAR_ID,
       group:groupId,season:"2026-2027",draw:"1",start:"0",length:"1500"
     }))url.searchParams.set(k,value);
-    const response=await fetch(url.href,{headers:{
+    const response=await fetchFhr(url.href,{headers:{
       "accept":"application/json","x-requested-with":"XMLHttpRequest",
       "referer":STATS_SOURCE,"user-agent":"JuniorU16-FHRStats/1.0"
     }});
@@ -810,7 +858,7 @@ async function getStats(queryGroup){
     skaters,goalies,
     note:"Full official FHR statistics tables. Goalie savePercentage is the source ratio 0–1, not 0–100."
   };
-  await caches.default.put(key,new Response(JSON.stringify(payload),{
+  await writeCache(key,new Response(JSON.stringify(payload),{
     headers:{"content-type":"application/json","cache-control":"public,max-age=600"}
   }));
   return payload;
@@ -838,7 +886,7 @@ export default {
     }
 
     if(url.pathname==="/api/v1/teams"){
-      try{return json(await getTeams(),200,90);}
+      try{const data=await getTeams();return json(data,200,data.complete?90:5);}
       catch(error){return json({ok:false,error:"FHR team directory failed",detail:String(error&&error.message||error).slice(0,200)},502,0);}
     }
     const rosterRoute=url.pathname.match(/^\/api\/v1\/teams\/(\d+)\/?$/);
@@ -889,7 +937,8 @@ export default {
 
     if (url.pathname === "/api/v1/matches") {
       try {
-        return json(await getCalendar(), 200, 10);
+        const data = await getCalendar();
+        return json(data, 200, data.partial ? 5 : 10);
       } catch (error) {
         return json({
           ok: false,
